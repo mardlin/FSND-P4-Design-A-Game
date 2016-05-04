@@ -58,4 +58,9 @@ docs/_build/
 # PyBuilder
 target/
 
+# AppEngine stuff
+test/
+
+
+
 # Created by .ignore support plugin (hsz.mobi)
