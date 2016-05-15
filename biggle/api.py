@@ -52,12 +52,18 @@ class GuessANumberApi(remote.Service):
                       http_method='POST')
     def new_game(self, request):
         """Creates new game"""
-        user = User.query(User.name == request.user_name).get()
-        if not user:
+        user1_name = request.user1_name      
+        user1 = User.query(User.name == request.user1_name).get()
+        if not user1:
             raise endpoints.NotFoundException(
-                    'A User with that name does not exist!')
+                    'A User named %s does not exist!' % user1_name)
+        user2_name = request.user2_name      
+        user2 = User.query(User.name == request.user2_name).get()
+        if not user2:
+            raise endpoints.NotFoundException(
+                    'A User named %s does not exist!' % user2_name)
         try:
-            game = Game.new_game(user.key, request.min,
+            game = Game.new_game(user1.key, user2.key, request.turns
                                  request.max, request.attempts)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
@@ -67,7 +73,7 @@ class GuessANumberApi(remote.Service):
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('Good luck playing Guess a Number!')
+        return game.to_form('Good luck playing biggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
