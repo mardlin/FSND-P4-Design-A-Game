@@ -16,21 +16,30 @@ class User(ndb.Model):
 
 class Game(ndb.Model):
     """Game object"""
-    target = ndb.IntegerProperty(required=True)
-    attempts_allowed = ndb.IntegerProperty(required=True)
-    attempts_remaining = ndb.IntegerProperty(required=True, default=5)
+    board = ndb.pickleProperty(required=True) # NxN list of letters
+    users = ndb.pickleProperty(required=True) # 2-tuple of User 
+    turns_allowed = ndb.IntegerProperty(required=True)
+    turns_remaining = ndb.IntegerProperty(required=True)
+    guessed = ndb.pickleProperty() # a list of the words guessed
+    scores = ndb.pickleProperty() # 2-tuple of integers w/ cumulative score per user
     game_over = ndb.BooleanProperty(required=True, default=False)
-    user = ndb.KeyProperty(required=True, kind='User')
+    
 
     @classmethod
-    def new_game(cls, user, min, max, attempts):
+    def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
-        if max < min:
-            raise ValueError('Maximum must be greater than minimum')
-        game = Game(user=user,
-                    target=random.choice(range(1, max + 1)),
-                    attempts_allowed=attempts,
-                    attempts_remaining=attempts,
+        # generate a 4x4 board
+        board = [
+         ["I", "O", "F", "V"],
+         ["I", "D", "E", "A"],
+         ["F", "O", "E", "T"],
+         ["L", "N", "O", "L"]
+        ]
+
+        game = Game(board=board
+                    users=(user1, user2),
+                    turns_allowed=turns,
+                    turns_remaining=turns,
                     game_over=False)
         game.put()
         return game
@@ -39,8 +48,11 @@ class Game(ndb.Model):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
-        form.user_name = self.user.get().name
-        form.attempts_remaining = self.attempts_remaining
+        form.user1_name = self.users[0].get().name
+        form.user2_name = self.users[1].get().name
+        form.turns_remaining = self.turns_remaining
+        form.guessed = self.guessed
+        form.scores = self.scores
         form.game_over = self.game_over
         form.message = message
         return form
@@ -52,7 +64,7 @@ class Game(ndb.Model):
         self.put()
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      guesses=self.turns_allowed - self.turns_remaining)
         score.put()
 
 
@@ -71,7 +83,7 @@ class Score(ndb.Model):
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
-    attempts_remaining = messages.IntegerField(2, required=True)
+    turns_remaining = messages.IntegerField(2, required=True)
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
@@ -82,7 +94,7 @@ class NewGameForm(messages.Message):
     user_name = messages.StringField(1, required=True)
     min = messages.IntegerField(2, default=1)
     max = messages.IntegerField(3, default=10)
-    attempts = messages.IntegerField(4, default=5)
+    turns = messages.IntegerField(4, default=5)
 
 
 class MakeMoveForm(messages.Message):
