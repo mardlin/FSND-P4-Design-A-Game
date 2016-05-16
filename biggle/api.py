@@ -71,7 +71,7 @@ class GuessANumberApi(remote.Service):
         # Use a task queue to update the average turns remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
-        taskqueue.add(url='/tasks/cache_average_turns')
+        # taskqueue.add(url='/tasks/cache_average_turns')
         return game.to_form('Good luck playing biggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,

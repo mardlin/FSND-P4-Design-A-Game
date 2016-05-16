@@ -3,6 +3,7 @@ entities used by the Game. Because these classes are also regular Python
 classes they can include methods (such as 'to_form' and 'new_game')."""
 
 import random
+import json
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -16,12 +17,13 @@ class User(ndb.Model):
 
 class Game(ndb.Model):
     """Game object"""
-    board = ndb.pickleProperty(required=True) # NxN list of letters
-    users = ndb.pickleProperty(required=True) # 2-tuple of User 
+    user1 = ndb.KeyProperty(required=True, kind='User')
+    user2 = ndb.KeyProperty(required=True, kind='User')
+    board = ndb.PickleProperty(required=True) # NxN list of letters
+    guessed = ndb.PickleProperty(default=[]) # a list of the words guessed
+    scores = ndb.PickleProperty(default=(0,0)) # 2-tuple of integers w/ cumulative score per user
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
-    guessed = ndb.pickleProperty() # a list of the words guessed
-    scores = ndb.pickleProperty() # 2-tuple of integers w/ cumulative score per user
     game_over = ndb.BooleanProperty(required=True, default=False)
     
 
@@ -30,14 +32,15 @@ class Game(ndb.Model):
         """Creates and returns a new game"""
         # generate a 4x4 board
         board = [
-         ["I", "O", "F", "V"],
-         ["I", "D", "E", "A"],
-         ["F", "O", "E", "T"],
-         ["L", "N", "O", "L"]
+         ['I', 'O', 'F', 'V'],
+         ['I', 'D', 'E', 'A'],
+         ['F', 'O', 'E', 'T'],
+         ['L', 'N', 'O', 'L']
         ]
 
-        game = Game(board=board
-                    users=(user1, user2),
+        game = Game(board=board,
+                    user1=user1,
+                    user2=user2,
                     turns_allowed=turns,
                     turns_remaining=turns,
                     game_over=False)
@@ -48,11 +51,12 @@ class Game(ndb.Model):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
-        form.user1_name = self.users[0].get().name
-        form.user2_name = self.users[1].get().name
+        form.user1_name = self.user1.get().name
+        form.user2_name = self.user2.get().name
         form.turns_remaining = self.turns_remaining
-        form.guessed = self.guessed
-        form.scores = self.scores
+        form.board = json.dumps(self.board)
+        # form.guessed = self.guessed
+        # form.scores = self.scores
         form.game_over = self.game_over
         form.message = message
         return form
@@ -86,15 +90,18 @@ class GameForm(messages.Message):
     turns_remaining = messages.IntegerField(2, required=True)
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
-    user_name = messages.StringField(5, required=True)
+    user1_name = messages.StringField(5, required=True)
+    user2_name = messages.StringField(6, required=True)
+    board = messages.EnumField(7)
+    # guessed = messages.PickleField(7)
+    # scores
 
 
 class NewGameForm(messages.Message):
     """Used to create a new game"""
-    user_name = messages.StringField(1, required=True)
-    min = messages.IntegerField(2, default=1)
-    max = messages.IntegerField(3, default=10)
-    turns = messages.IntegerField(4, default=5)
+    user1_name = messages.StringField(1, required=True)
+    user2_name = messages.StringField(2, required=True)
+    turns = messages.IntegerField(3, default=20)
 
 
 class MakeMoveForm(messages.Message):
