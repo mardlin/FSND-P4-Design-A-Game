@@ -25,6 +25,7 @@ class Game(ndb.Model):
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
     game_over = ndb.BooleanProperty(required=True, default=False)
+    game_cancelled = ndb.BooleanProperty(required=True, default=False)
     
 
     @classmethod
@@ -46,6 +47,11 @@ class Game(ndb.Model):
                     game_over=False)
         game.put()
         return game
+
+    def check_word(self, word):
+        word_coords = find_letters(word, self.board)
+        return all_paths(word, word_coords)
+
 
     def to_form(self, message):
         """Returns a GameForm representation of the Game"""
@@ -92,7 +98,7 @@ class GameForm(messages.Message):
     message = messages.StringField(4, required=True)
     user1_name = messages.StringField(5, required=True)
     user2_name = messages.StringField(6, required=True)
-    board = messages.EnumField(7)
+    board = messages.StringField(7)
     # guessed = messages.PickleField(7)
     # scores
 
@@ -106,7 +112,7 @@ class NewGameForm(messages.Message):
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    guess = messages.IntegerField(1, required=True)
+    guess = messages.StringField(1, required=True)
 
 
 class ScoreForm(messages.Message):
