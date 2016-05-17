@@ -3,6 +3,8 @@ entities used by the Game. Because these classes are also regular Python
 classes they can include methods (such as 'to_form' and 'new_game')."""
 
 import random
+import json
+import boggle
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -16,31 +18,57 @@ class User(ndb.Model):
 
 class Game(ndb.Model):
     """Game object"""
-    target = ndb.IntegerProperty(required=True)
-    attempts_allowed = ndb.IntegerProperty(required=True)
-    attempts_remaining = ndb.IntegerProperty(required=True, default=5)
+    user1 = ndb.KeyProperty(required=True, kind='User')
+    user2 = ndb.KeyProperty(required=True, kind='User')
+    board = ndb.PickleProperty(required=True) # NxN list of letters
+    guessed = ndb.PickleProperty(default=[]) # a list of the words guessed
+    scores = ndb.PickleProperty(default=(0,0)) # 2-tuple of integers w/ cumulative score per user
+    turns_allowed = ndb.IntegerProperty(required=True)
+    turns_remaining = ndb.IntegerProperty(required=True)
+    # add which players turn it is
     game_over = ndb.BooleanProperty(required=True, default=False)
-    user = ndb.KeyProperty(required=True, kind='User')
+    game_cancelled = ndb.BooleanProperty(required=True, default=False)
+
+    
 
     @classmethod
-    def new_game(cls, user, min, max, attempts):
+    def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
-        if max < min:
-            raise ValueError('Maximum must be greater than minimum')
-        game = Game(user=user,
-                    target=random.choice(range(1, max + 1)),
-                    attempts_allowed=attempts,
-                    attempts_remaining=attempts,
+        # generate a 4x4 board
+        board = [
+         ['I', 'O', 'F', 'V'],
+         ['I', 'D', 'E', 'A'],
+         ['F', 'O', 'E', 'T'],
+         ['L', 'N', 'O', 'L']
+        ]
+
+        game = Game(board=board,
+                    user1=user1,
+                    user2=user2,
+                    turns_allowed=turns,
+                    turns_remaining=turns,
                     game_over=False)
         game.put()
         return game
+
+    def check_word(self, word):
+        # add check for is_english
+        # if boggle.is_english():
+        #     self.guessed.append(word) 
+        word_coords = boggle.find_letters(word, self.board)
+        return boggle.all_paths(word, word_coords)
+
 
     def to_form(self, message):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
-        form.user_name = self.user.get().name
-        form.attempts_remaining = self.attempts_remaining
+        form.user1_name = self.user1.get().name
+        form.user2_name = self.user2.get().name
+        form.turns_remaining = self.turns_remaining
+        form.board = json.dumps(self.board)
+        # form.guessed = self.guessed
+        # form.scores = self.scores
         form.game_over = self.game_over
         form.message = message
         return form
@@ -52,7 +80,7 @@ class Game(ndb.Model):
         self.put()
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      guesses=self.turns_allowed - self.turns_remaining)
         score.put()
 
 
@@ -71,23 +99,26 @@ class Score(ndb.Model):
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
-    attempts_remaining = messages.IntegerField(2, required=True)
+    turns_remaining = messages.IntegerField(2, required=True)
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
-    user_name = messages.StringField(5, required=True)
+    user1_name = messages.StringField(5, required=True)
+    user2_name = messages.StringField(6, required=True)
+    board = messages.StringField(7)
+    # guessed = messages.PickleField(7)
+    # scores
 
 
 class NewGameForm(messages.Message):
     """Used to create a new game"""
-    user_name = messages.StringField(1, required=True)
-    min = messages.IntegerField(2, default=1)
-    max = messages.IntegerField(3, default=10)
-    attempts = messages.IntegerField(4, default=5)
+    user1_name = messages.StringField(1, required=True)
+    user2_name = messages.StringField(2, required=True)
+    turns = messages.IntegerField(3, default=20)
 
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    guess = messages.IntegerField(1, required=True)
+    guess = messages.StringField(1, required=True)
 
 
 class ScoreForm(messages.Message):

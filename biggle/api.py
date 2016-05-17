@@ -52,22 +52,27 @@ class GuessANumberApi(remote.Service):
                       http_method='POST')
     def new_game(self, request):
         """Creates new game"""
-        user = User.query(User.name == request.user_name).get()
-        if not user:
+        user1_name = request.user1_name      
+        user1 = User.query(User.name == request.user1_name).get()
+        if not user1:
             raise endpoints.NotFoundException(
-                    'A User with that name does not exist!')
+                    'A User named %s does not exist!' % user1_name)
+        user2_name = request.user2_name      
+        user2 = User.query(User.name == request.user2_name).get()
+        if not user2:
+            raise endpoints.NotFoundException(
+                    'A User named %s does not exist!' % user2_name)
         try:
-            game = Game.new_game(user.key, request.min,
-                                 request.max, request.attempts)
+            game = Game.new_game(user1.key, user2.key, request.turns)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
                                                 'than minimum!')
 
-        # Use a task queue to update the average attempts remaining.
+        # Use a task queue to update the average turns remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
-        taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('Good luck playing Guess a Number!')
+        # taskqueue.add(url='/tasks/cache_average_turns')
+        return game.to_form('Good luck playing biggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -92,18 +97,21 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
+        # check which player's turn it is
 
-        game.attempts_remaining -= 1
-        if request.guess == game.target:
-            game.end_game(True)
-            return game.to_form('You win!')
-
-        if request.guess < game.target:
-            msg = 'Too low!'
+        game.turns_remaining -= 1
+        if game.check_word(request.guess):
+            return game.to_form(
+                'Correct! {} points for the word "{}"'
+                .format('-N-',request.guess)
+                )
         else:
-            msg = 'Too high!'
+            return game.to_form(
+                'Wrong! The word "{}" is not in the board.'
+                .format('-N-',request.guess)
+                )
 
-        if game.attempts_remaining < 1:
+        if game.turns_remaining < 1:
             game.end_game(False)
             return game.to_form(msg + ' Game over!')
         else:
@@ -133,22 +141,22 @@ class GuessANumberApi(remote.Service):
         return ScoreForms(items=[score.to_form() for score in scores])
 
     @endpoints.method(response_message=StringMessage,
-                      path='games/average_attempts',
-                      name='get_average_attempts_remaining',
+                      path='games/average_turns',
+                      name='get_average_turns_remaining',
                       http_method='GET')
-    def get_average_attempts(self, request):
+    def get_average_turns(self, request):
         """Get the cached average moves remaining"""
         return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
 
     @staticmethod
-    def _cache_average_attempts():
+    def _cache_average_turns():
         """Populates memcache with the average moves remaining of Games"""
         games = Game.query(Game.game_over == False).fetch()
         if games:
             count = len(games)
-            total_attempts_remaining = sum([game.attempts_remaining
+            total_turns_remaining = sum([game.turns_remaining
                                         for game in games])
-            average = float(total_attempts_remaining)/count
+            average = float(total_turns_remaining)/count
             memcache.set(MEMCACHE_MOVES_REMAINING,
                          'The average moves remaining is {:.2f}'.format(average))
 
