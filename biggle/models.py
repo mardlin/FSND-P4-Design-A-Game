@@ -4,6 +4,7 @@ classes they can include methods (such as 'to_form' and 'new_game')."""
 
 import random
 import json
+import boggle
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -24,8 +25,10 @@ class Game(ndb.Model):
     scores = ndb.PickleProperty(default=(0,0)) # 2-tuple of integers w/ cumulative score per user
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
+    # add which players turn it is
     game_over = ndb.BooleanProperty(required=True, default=False)
     game_cancelled = ndb.BooleanProperty(required=True, default=False)
+
     
 
     @classmethod
@@ -49,8 +52,11 @@ class Game(ndb.Model):
         return game
 
     def check_word(self, word):
-        word_coords = find_letters(word, self.board)
-        return all_paths(word, word_coords)
+        # add check for is_english
+        # if boggle.is_english():
+        #     self.guessed.append(word) 
+        word_coords = boggle.find_letters(word, self.board)
+        return boggle.all_paths(word, word_coords)
 
 
     def to_form(self, message):

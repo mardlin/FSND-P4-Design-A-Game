@@ -97,16 +97,19 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
+        # check which player's turn it is
 
         game.turns_remaining -= 1
-        if request.guess == game.target:
-            game.end_game(True)
-            return game.to_form('You win!')
-
-        if request.guess < game.target:
-            msg = 'Too low!'
+        if game.check_word(request.guess):
+            return game.to_form(
+                'Correct! {} points for the word "{}"'
+                .format('-N-',request.guess)
+                )
         else:
-            msg = 'Too high!'
+            return game.to_form(
+                'Wrong! The word "{}" is not in the board.'
+                .format('-N-',request.guess)
+                )
 
         if game.turns_remaining < 1:
             game.end_game(False)
