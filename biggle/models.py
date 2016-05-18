@@ -25,10 +25,9 @@ class Game(ndb.Model):
     scores = ndb.PickleProperty(default=(0,0)) # 2-tuple of integers w/ cumulative score per user
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
-    # add which players turn it is
+    user1_is_next = ndb.BooleanProperty(required=True, default=True) # If True, user1 is next
     game_over = ndb.BooleanProperty(required=True, default=False)
     game_cancelled = ndb.BooleanProperty(required=True, default=False)
-
     
 
     @classmethod
@@ -45,6 +44,7 @@ class Game(ndb.Model):
         game = Game(board=board,
                     user1=user1,
                     user2=user2,
+                    user1_is_next=True,
                     turns_allowed=turns,
                     turns_remaining=turns,
                     game_over=False)
@@ -65,6 +65,7 @@ class Game(ndb.Model):
         form.urlsafe_key = self.key.urlsafe()
         form.user1_name = self.user1.get().name
         form.user2_name = self.user2.get().name
+        form.user1_is_next = self.user1_is_next
         form.turns_remaining = self.turns_remaining
         form.board = json.dumps(self.board)
         # form.guessed = self.guessed
@@ -104,9 +105,11 @@ class GameForm(messages.Message):
     message = messages.StringField(4, required=True)
     user1_name = messages.StringField(5, required=True)
     user2_name = messages.StringField(6, required=True)
-    board = messages.StringField(7)
+    user1_is_next = messages.BooleanField(7, required=True)
+    board = messages.StringField(8)
     # guessed = messages.PickleField(7)
     # scores
+
 
 
 class NewGameForm(messages.Message):
@@ -118,7 +121,9 @@ class NewGameForm(messages.Message):
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    guess = messages.StringField(1, required=True)
+    user_name = messages.StringField(1, required=True)
+    guess = messages.StringField(2, required=True)
+
 
 
 class ScoreForm(messages.Message):

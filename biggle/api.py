@@ -97,8 +97,18 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
-        # check which player's turn it is
-
+        user_name = request.user_name        
+        user = User.query(User.name == request.user_name).get()
+        # Make sure it's this user's turn
+        next_user = game.user2
+        if game.user1_is_next:
+            next_user = game.user1
+        if user.key != next_user:
+            print user
+            print next_user
+            return game.to_form('It\'s not your turn')
+    
+        game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
         if game.check_word(request.guess):
             return game.to_form(
