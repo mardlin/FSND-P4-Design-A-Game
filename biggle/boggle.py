@@ -99,6 +99,23 @@ def all_paths(word, word_coords):
     return False
 
 
+def word_points(word):
+    """Return the number of points earned by finding a word.
+    The points scheme is taken from https://en.wikipedia.org/wiki/Boggle
+    """
+    l = len(word)
+    if l<3:
+        return 0
+    elif l<5:
+        return 1
+    elif l==5:
+        return 2
+    elif l==6:
+        return 3
+    elif l==7:
+        return 5
+    else: 
+        return 11 
  
 
 

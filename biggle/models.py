@@ -22,8 +22,9 @@ class Game(ndb.Model):
     user1 = ndb.KeyProperty(required=True, kind='User')
     user2 = ndb.KeyProperty(required=True, kind='User')
     board = ndb.PickleProperty(required=True) # NxN list of letters
-    guessed = ndb.PickleProperty(default=[]) # a list of the words guessed
-    scores = ndb.PickleProperty(default=(0,0)) # 2-tuple of integers w/ cumulative score per user
+    user1_points = ndb.IntegerProperty(required=True, default=0)
+    user2_points = ndb.IntegerProperty(required=True, default=0)
+    # words_found = ndb.PickleProperty(default=[]) # a list of the words guessed
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
     user1_is_next = ndb.BooleanProperty(required=True, default=True) # If True, user1 is next
@@ -61,11 +62,12 @@ class Game(ndb.Model):
         form.urlsafe_key = self.key.urlsafe()
         form.user1_name = self.user1.get().name
         form.user2_name = self.user2.get().name
+        form.user1_points = self.user1_points
+        form.user2_points = self.user2_points
         form.user1_is_next = self.user1_is_next
         form.turns_remaining = self.turns_remaining
         form.board = json.dumps(self.board)
         # form.guessed = self.guessed
-        # form.scores = self.scores
         form.game_over = self.game_over
         form.message = message
         return form
@@ -96,13 +98,15 @@ class Score(ndb.Model):
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
-    turns_remaining = messages.IntegerField(2, required=True)
-    game_over = messages.BooleanField(3, required=True)
-    message = messages.StringField(4, required=True)
-    user1_name = messages.StringField(5, required=True)
+    message = messages.StringField(2, required=True)
+    turns_remaining = messages.IntegerField(3, required=True)
+    user1_name = messages.StringField(4, required=True)
+    user1_points = messages.IntegerField(5, required=True)
     user2_name = messages.StringField(6, required=True)
-    user1_is_next = messages.BooleanField(7, required=True)
-    board = messages.StringField(8)
+    user2_points = messages.IntegerField(7, required=True)
+    user1_is_next = messages.BooleanField(8, required=True)
+    game_over = messages.BooleanField(9, required=True)
+    board = messages.StringField(10)
     # guessed = messages.PickleField(7)
     # scores
 

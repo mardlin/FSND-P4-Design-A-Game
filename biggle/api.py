@@ -7,6 +7,7 @@ primarily with communication to/from the API's users."""
 
 import logging
 import endpoints
+from boggle import word_points
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
@@ -64,10 +65,8 @@ class GuessANumberApi(remote.Service):
                     'A User named %s does not exist!' % user2_name)
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
-        except ValueError:
-            raise endpoints.BadRequestException('Maximum must be greater '
-                                                'than minimum!')
-
+        except:
+            raise endpoints.BadRequestException('Bad request')
         # Use a task queue to update the average turns remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
@@ -99,26 +98,40 @@ class GuessANumberApi(remote.Service):
             return game.to_form('Game already over!')
         user_name = request.user_name        
         user = User.query(User.name == request.user_name).get()
-        # Make sure it's this user's turn
-        next_user = game.user2
-        if game.user1_is_next:
-            next_user = game.user1
-        if user.key != next_user:
-            print user
-            print next_user
+        if user.key not in [game.user1, game.user2]:
+            return game.to_form('You\'re not playing in this game')
+        
+        # Make sure it is this user's turn
+        whose_turn = game.user2 
+        if game.user1_is_next: 
+            whose_turn = game.user1
+        if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
-    
+        
+        # OK then. This turn is happening!
+        # Give the next turn to the other user
         game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
-        if game.check_word(request.guess):
+        # make the submitted word all caps for checking.
+        guess = request.guess.upper()
+        # Check that the word is valid in the board
+        if game.check_word(guess):
+            # calculate and add points to the users's total for this game
+            points = word_points(guess)
+            if user.key == game.user1:
+                 game.user1_points += points
+            else: 
+                 game.user2_points += points
+            game.put()
             return game.to_form(
                 'Correct! {} points for the word "{}"'
-                .format('-N-',request.guess)
+                .format(points,guess)
                 )
         else:
+            game.put()
             return game.to_form(
                 'Wrong! The word "{}" is not in the board.'
-                .format('-N-',request.guess)
+                .format(guess)
                 )
 
         if game.turns_remaining < 1:
