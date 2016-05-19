@@ -5,6 +5,7 @@ classes they can include methods (such as 'to_form' and 'new_game')."""
 import random
 import json
 import boggle
+import generate_board
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -34,12 +35,7 @@ class Game(ndb.Model):
     def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
         # generate a 4x4 board
-        board = [
-         ['I', 'O', 'F', 'V'],
-         ['I', 'D', 'E', 'A'],
-         ['F', 'O', 'E', 'T'],
-         ['L', 'N', 'O', 'L']
-        ]
+        board = generate_board.board()
 
         game = Game(board=board,
                     user1=user1,
