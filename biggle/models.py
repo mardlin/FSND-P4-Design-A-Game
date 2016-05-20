@@ -6,10 +6,13 @@ import random
 import json
 import boggle
 import generate_board
+import enchant
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
+# We'll use the US dictionary
+dictionary = enchant.Dict('en_US')
 
 class User(ndb.Model):
     """User profile"""
@@ -49,9 +52,13 @@ class Game(ndb.Model):
         return game
 
     def check_word(self, word):
-        # add check for is_english
-        # if boggle.is_english():
-        #     self.guessed.append(word) 
+        """Returns a boolean value indicating whether the word is
+        valid, and can actually be constructed from the board.
+        """
+        if not dictionary.check(word):
+            return False
+        # Test that the word can be found on the board, in a continuous path
+        # which does not overlap itself.     
         word_coords = boggle.find_letters(word, self.board)
         return boggle.all_paths(word, word_coords)
 
