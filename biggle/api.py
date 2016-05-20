@@ -11,12 +11,12 @@ from boggle import word_points
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
-
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms
 from utils import get_by_urlsafe
 
+### --- Resource Container Configuration --- ###
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
         urlsafe_game_key=messages.StringField(1),)
@@ -28,6 +28,8 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
+
+### --- Endpoints  --- ###
 @endpoints.api(name='guess_a_number', version='v1')
 class GuessANumberApi(remote.Service):
     """Game API"""
