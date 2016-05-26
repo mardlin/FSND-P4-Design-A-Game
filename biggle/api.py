@@ -7,6 +7,8 @@ primarily with communication to/from the API's users."""
 
 import logging
 import endpoints
+import requests
+import xml.etree.ElementTree as ET
 from boggle import word_points
 from protorpc import remote, messages
 from google.appengine.api import memcache
@@ -116,24 +118,43 @@ class GuessANumberApi(remote.Service):
         game.turns_remaining -= 1
         # make the submitted word all caps for checking.
         guess = request.guess.upper()
-        # Check that the word is valid in the board
-        if game.check_word(guess):
-            # calculate and add points to the users's total for this game
-            points = word_points(guess)
-            if user.key == game.user1:
-                 game.user1_points += points
-            else: 
-                 game.user2_points += points
-            game.put()
+        # Check that the word is in the dictionary:
+        dictionary_url = "http://www.dictionaryapi.com"\
+                 "/api/v1/references/collegiate/xml/{}"
+        dict_lookup = requests.get(
+            dictionary_url.format("threaded"),
+            {'key': 'a910e27f-cb8e-4d10-9a2d-b8bf3530c02d'}
+            )
+
+        # The Merriam-Webster API returns an XML string. If the word is found
+        # the XML will contain an <entry> tag.
+        # This makes us of the ElementTree XML API module
+        # https://docs.python.org/2.7/library/xml.etree.elementtree.html
+        tree = ET.fromstring(dict_lookup.text.encode('utf-8'))
+        entry = tree.find('entry')
+        if e is None:
             return game.to_form(
-                'Correct! {} points for the word "{}"'
-                .format(points,guess)
+                'Sorry! "{}" is not in the english dictionary'.format(word)
                 )
-        else:
+
+        # Check that the word is valid in the board
+        if not game.check_word(guess):
             game.put()
             return game.to_form(
                 'Wrong! The word "{}" is not in the board.'
                 .format(guess)
+                )
+        else:
+            # calculate and add points to the users's total for this game
+            points = word_points(guess)
+            if user.key == game.user1:
+                game.user1_points += points
+            else:
+                game.user2_points += points
+            game.put()
+            return game.to_form(
+                'Correct! {} points for the word "{}"'
+                .format(points, guess)
                 )
 
         if game.turns_remaining < 1:

@@ -11,8 +11,6 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
-# We'll use the US dictionary
-dictionary = enchant.Dict('en_US')
 
 class User(ndb.Model):
     """User profile"""
