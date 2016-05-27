@@ -82,11 +82,11 @@ def all_paths(word, word_coords):
         # build an "options list" by counting coords for each word
         options.append(len(word_coords[letter]))
     print options
-    # For each item in the options list, 
+    # For each item in the options list,
     # create a list of each posible path through the coords
     paths = [[]]
     for letter in word:
-        new_paths=[]
+        new_paths = []
         for i in range(len(paths)):
             for j in range(len(word_coords[letter])):
                 new_paths.append(paths[i]+[word_coords[letter][j]])
@@ -104,19 +104,15 @@ def word_points(word):
     The points scheme is taken from https://en.wikipedia.org/wiki/Boggle
     """
     l = len(word)
-    if l<3:
+    if l < 3:
         return 0
-    elif l<5:
+    elif l < 5:
         return 1
-    elif l==5:
+    elif l == 5:
         return 2
-    elif l==6:
+    elif l == 6:
         return 3
-    elif l==7:
+    elif l == 7:
         return 5
-    else: 
-        return 11 
- 
-
-
-
+    else:
+        return 11
