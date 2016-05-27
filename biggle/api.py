@@ -7,12 +7,12 @@ primarily with communication to/from the API's users."""
 
 import logging
 import endpoints
-import requests
 import xml.etree.ElementTree as ET
 from boggle import word_points
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.api import urlfetch
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms
@@ -102,12 +102,14 @@ class GuessANumberApi(remote.Service):
             return game.to_form('Game already over!')
         user_name = request.user_name        
         user = User.query(User.name == request.user_name).get()
+        if user is None:
+            return game.to_form('Player not found.')
         if user.key not in [game.user1, game.user2]:
             return game.to_form('You\'re not playing in this game')
-        
+
         # Make sure it is this user's turn
-        whose_turn = game.user2 
-        if game.user1_is_next: 
+        whose_turn = game.user2
+        if game.user1_is_next:
             whose_turn = game.user1
         if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
@@ -120,28 +122,28 @@ class GuessANumberApi(remote.Service):
         guess = request.guess.upper()
         # Check that the word is in the dictionary:
         dictionary_url = "http://www.dictionaryapi.com"\
-                 "/api/v1/references/collegiate/xml/{}"
-        dict_lookup = requests.get(
-            dictionary_url.format("threaded"),
-            {'key': 'a910e27f-cb8e-4d10-9a2d-b8bf3530c02d'}
-            )
-
+                         "/api/v1/references/collegiate/xml/{word}?key={key}"
+        dict_lookup = urlfetch.Fetch(
+            dictionary_url.format(word=guess,
+                                  key='a910e27f-cb8e-4d10-9a2d-b8bf3530c02d')
+        )
         # The Merriam-Webster API returns an XML string. If the word is found
         # the XML will contain an <entry> tag.
         # This makes us of the ElementTree XML API module
         # https://docs.python.org/2.7/library/xml.etree.elementtree.html
-        tree = ET.fromstring(dict_lookup.text.encode('utf-8'))
-        entry = tree.find('entry')
-        if e is None:
+        parsed_xml = ET.fromstring(dict_lookup.content)
+        entry = parsed_xml.find('entry')
+        if entry is None:
+            game.put()
             return game.to_form(
-                'Sorry! "{}" is not in the english dictionary'.format(word)
+                'Sorry! "{}" is not in the english dictionary'.format(guess)
                 )
 
         # Check that the word is valid in the board
         if not game.check_word(guess):
             game.put()
             return game.to_form(
-                'Wrong! The word "{}" is not in the board.'
+                'Sorry! The word "{}" is not in the board.'
                 .format(guess)
                 )
         else:
