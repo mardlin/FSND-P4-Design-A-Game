@@ -6,7 +6,6 @@ import random
 import json
 import boggle
 import generate_board
-import enchant
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -15,23 +14,22 @@ from google.appengine.ext import ndb
 class User(ndb.Model):
     """User profile"""
     name = ndb.StringProperty(required=True)
-    email =ndb.StringProperty()
+    email = ndb.StringProperty()
 
 
 class Game(ndb.Model):
     """Game object"""
     user1 = ndb.KeyProperty(required=True, kind='User')
     user2 = ndb.KeyProperty(required=True, kind='User')
-    board = ndb.PickleProperty(required=True) # NxN list of letters
+    board = ndb.PickleProperty(required=True)  # NxN list of letters
     user1_points = ndb.IntegerProperty(required=True, default=0)
     user2_points = ndb.IntegerProperty(required=True, default=0)
-    # words_found = ndb.PickleProperty(default=[]) # a list of the words guessed
+    # words_found = ndb.PickleProperty(default=[])  # a list of words guessed
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
-    user1_is_next = ndb.BooleanProperty(required=True, default=True) # If True, user1 is next
+    user1_is_next = ndb.BooleanProperty(required=True, default=True)
     game_over = ndb.BooleanProperty(required=True, default=False)
     game_cancelled = ndb.BooleanProperty(required=True, default=False)
-    
 
     @classmethod
     def new_game(cls, user1, user2, turns):
@@ -50,14 +48,13 @@ class Game(ndb.Model):
         return game
 
     def check_word(self, word):
-        """Returns a boolean value indicating whether the word is
-        valid, and can actually be constructed from the board.
+        """Returns a boolean value indicating whether the word
+        can actually be constructed from the board.
         """
-        if not dictionary.check(word):
-            return False
-        # Test that the word can be found on the board, in a continuous path
-        # which does not overlap itself.     
+        # use the boggle.find_letters() method to get a list of the coords
+        # of the words
         word_coords = boggle.find_letters(word, self.board)
+        # check for a continuous path among thos coordinates
         return boggle.all_paths(word, word_coords)
 
 
