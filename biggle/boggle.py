@@ -53,6 +53,7 @@ def _is_adjacent(c1, c2):
             return False
     return True
 
+
 def _path_test(path):
     """
     Takes: a list of 2-dim coordinate tuples

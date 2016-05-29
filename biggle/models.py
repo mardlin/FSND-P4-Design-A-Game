@@ -24,7 +24,7 @@ class Game(ndb.Model):
     board = ndb.PickleProperty(required=True)  # NxN list of letters
     user1_points = ndb.IntegerProperty(required=True, default=0)
     user2_points = ndb.IntegerProperty(required=True, default=0)
-    # words_found = ndb.PickleProperty(default=[])  # a list of words guessed
+    words_found = ndb.PickleProperty(required=True, default=["first"])
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
     user1_is_next = ndb.BooleanProperty(required=True, default=True)
@@ -40,6 +40,7 @@ class Game(ndb.Model):
         game = Game(board=board,
                     user1=user1,
                     user2=user2,
+                    words_found=[],
                     user1_is_next=True,
                     turns_allowed=turns,
                     turns_remaining=turns,
@@ -57,7 +58,6 @@ class Game(ndb.Model):
         # check for a continuous path among thos coordinates
         return boggle.all_paths(word, word_coords)
 
-
     def to_form(self, message):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
@@ -69,7 +69,7 @@ class Game(ndb.Model):
         form.user1_is_next = self.user1_is_next
         form.turns_remaining = self.turns_remaining
         form.board = json.dumps(self.board)
-        # form.guessed = self.guessed
+        form.words_found = json.dumps(self.words_found)
         form.game_over = self.game_over
         form.message = message
         return form
@@ -109,7 +109,8 @@ class GameForm(messages.Message):
     user1_is_next = messages.BooleanField(8, required=True)
     game_over = messages.BooleanField(9, required=True)
     board = messages.StringField(10)
-    # guessed = messages.PickleField(7)
+    words_found = messages.StringField(11)
+
     # scores
 
 
