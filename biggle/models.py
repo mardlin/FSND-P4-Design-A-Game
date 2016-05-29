@@ -16,6 +16,13 @@ class User(ndb.Model):
     name = ndb.StringProperty(required=True)
     email = ndb.StringProperty()
 
+    def to_form(self):
+        """Returns a GameForm representation of the Game"""
+        form = UserForm()
+        form.urlsafe_key = self.key.urlsafe()
+        form.name = self.name
+        return form
+
 
 class Game(ndb.Model):
     """Game object"""
@@ -97,6 +104,11 @@ class Score(ndb.Model):
                          date=str(self.date), guesses=self.guesses)
 
 
+class UserForm(messages.Message):
+    urlsafe_key = messages.StringField(1, required=True)
+    name = messages.StringField(2, required=True)
+
+
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
@@ -111,8 +123,11 @@ class GameForm(messages.Message):
     board = messages.StringField(10)
     words_found = messages.StringField(11)
 
-    # scores
 
+class GameForms(messages.Message):
+    """Return multiple GameForms"""
+    user = messages.MessageField(UserForm, 1)
+    games = messages.MessageField(GameForm, 2, repeated=True)
 
 
 class NewGameForm(messages.Message):
@@ -126,7 +141,6 @@ class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
     user_name = messages.StringField(1, required=True)
     guess = messages.StringField(2, required=True)
-
 
 
 class ScoreForm(messages.Message):

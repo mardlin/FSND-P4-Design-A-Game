@@ -15,13 +15,15 @@ from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms
+    ScoreForms, GameForms
 from utils import get_by_urlsafe
 
-### --- Resource Container Configuration --- ###
+#  ## --- Resource Container Configuration --- ###  #
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
-        urlsafe_game_key=messages.StringField(1),)
+    urlsafe_game_key=messages.StringField(1),)
+USER_GAMES_REQUEST = endpoints.ResourceContainer(
+    urlsafe_user_key=messages.StringField(1),)
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
@@ -31,7 +33,7 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 
-### --- Endpoints  --- ###
+#  ## --- Endpoints  --- ##  #
 @endpoints.api(name='guess_a_number', version='v1')
 class GuessANumberApi(remote.Service):
     """Game API"""
@@ -57,12 +59,12 @@ class GuessANumberApi(remote.Service):
                       http_method='POST')
     def new_game(self, request):
         """Creates new game"""
-        user1_name = request.user1_name      
+        user1_name = request.user1_name
         user1 = User.query(User.name == request.user1_name).get()
         if not user1:
             raise endpoints.NotFoundException(
                     'A User named %s does not exist!' % user1_name)
-        user2_name = request.user2_name      
+        user2_name = request.user2_name
         user2 = User.query(User.name == request.user2_name).get()
         if not user2:
             raise endpoints.NotFoundException(
@@ -85,7 +87,7 @@ class GuessANumberApi(remote.Service):
     def get_game(self, request):
         """Return the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
+        if game is not None:
             return game.to_form('Time to make a move!')
         else:
             raise endpoints.NotFoundException('Game not found!')
@@ -194,7 +196,27 @@ class GuessANumberApi(remote.Service):
                       http_method='GET')
     def get_average_turns(self, request):
         """Get the cached average moves remaining"""
-        return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+        return StringMessage(
+            message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+
+    @endpoints.method(request_message=USER_GAMES_REQUEST,
+                      response_message=GameForms,
+                      path='user/{urlsafe_user_key}',
+                      name='get_user_games',
+                      http_method='GET')
+    def get_user_games(self, request):
+        """Return the a list of game states for a user ."""
+        user = get_by_urlsafe(request.urlsafe_user_key, User)
+        if user is not None:
+            print user.name
+            games = Game.query(Game.user1 == user.key or
+                               Game.user2 == user.key)
+            return GameForms(
+                user=user.to_form(),
+                games=[game.to_form('{name} is a player in this game'.
+                       format(name='user.name')) for game in games])
+        else:
+            raise endpoints.NotFoundException('User not found!')
 
     @staticmethod
     def _cache_average_turns():
