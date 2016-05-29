@@ -111,8 +111,10 @@ class GameForm(messages.Message):
     board = messages.StringField(10)
     words_found = messages.StringField(11)
 
-    # scores
 
+class GameForms(messages.Message):
+    """Return multiple GameForms"""
+    items = messages.MessageField(GameForm, 1, repeated=True)
 
 
 class NewGameForm(messages.Message):
@@ -126,7 +128,6 @@ class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
     user_name = messages.StringField(1, required=True)
     guess = messages.StringField(2, required=True)
-
 
 
 class ScoreForm(messages.Message):
