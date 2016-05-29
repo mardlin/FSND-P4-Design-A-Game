@@ -212,7 +212,8 @@ class GuessANumberApi(remote.Service):
             games = Game.query(Game.user1 == user.key or
                                Game.user2 == user.key)
             return GameForms(
-                items=[game.to_form('{name} is a player in this game'.
+                user=user.to_form(),
+                games=[game.to_form('{name} is a player in this game'.
                        format(name='user.name')) for game in games])
         else:
             raise endpoints.NotFoundException('User not found!')
