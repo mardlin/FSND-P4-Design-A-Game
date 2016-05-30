@@ -31,7 +31,7 @@ class Game(ndb.Model):
     board = ndb.PickleProperty(required=True)  # NxN list of letters
     user1_points = ndb.IntegerProperty(required=True, default=0)
     user2_points = ndb.IntegerProperty(required=True, default=0)
-    words_found = ndb.PickleProperty(required=True, default=["first"])
+    words_found = ndb.PickleProperty(required=True, default=[""])
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
     user1_is_next = ndb.BooleanProperty(required=True, default=True)

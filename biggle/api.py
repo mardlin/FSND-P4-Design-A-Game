@@ -115,7 +115,7 @@ class GuessANumberApi(remote.Service):
             whose_turn = game.user1
         if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
-        
+
         # OK then. This turn is happening!
         # Give the next turn to the other user
         game.user1_is_next = not game.user1_is_next
@@ -141,7 +141,14 @@ class GuessANumberApi(remote.Service):
                 'Sorry! "{}" is not in the english dictionary'.format(guess)
                 )
 
-        # Check that the word is valid in the board
+        # Check that this word hasn't already been found
+        if guess in game.words_found:
+            game.put()
+            return game.to_form(
+                'Sorry! "{}" that word has already been found'.format(guess)
+                )
+
+        # Check that the word can be found on the board
         if not game.check_word(guess):
             game.put()
             return game.to_form(
@@ -151,6 +158,7 @@ class GuessANumberApi(remote.Service):
         else:
             # calculate and add points to the users's total for this game
             points = word_points(guess)
+            game.words_found.append(guess)
             if user.key == game.user1:
                 game.user1_points += points
             else:
