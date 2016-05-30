@@ -209,12 +209,16 @@ class GuessANumberApi(remote.Service):
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
             print user.name
-            games = Game.query(Game.user1 == user.key or
-                               Game.user2 == user.key)
+            games = Game.query(Game.user1 == user.key)
+            user1_games_form_list = [game.to_form('{name} is player 1 in this game'.
+                       format(name='user.name')) for game in games]
+            games = Game.query(Game.user2 == user.key)
+            user2_games_form_list = [game.to_form('{name} is player 2 in this game'.
+                       format(name='user.name')) for game in games]
+            games_form_list = user1_games_form_list + user2_games_form_list
             return GameForms(
                 user=user.to_form(),
-                games=[game.to_form('{name} is a player in this game'.
-                       format(name='user.name')) for game in games])
+                games=games_form_list)
         else:
             raise endpoints.NotFoundException('User not found!')
 
