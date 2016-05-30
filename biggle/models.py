@@ -125,8 +125,8 @@ class GameForm(messages.Message):
     words_found = messages.StringField(11)
 
 
-class GameForms(messages.Message):
-    """Return multiple GameForms"""
+class UserGameForms(messages.Message):
+    """Return multiple GameForms for a User"""
     user = messages.MessageField(UserForm, 1)
     games = messages.MessageField(GameForm, 2, repeated=True)
 

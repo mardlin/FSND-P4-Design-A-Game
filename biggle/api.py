@@ -15,7 +15,7 @@ from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms
+    ScoreForms, UserGameForms
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -202,7 +202,7 @@ class GuessANumberApi(remote.Service):
             message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
 
     @endpoints.method(request_message=USER_GAMES_REQUEST,
-                      response_message=GameForms,
+                      response_message=UserGameForms,
                       path='user/{urlsafe_user_key}',
                       name='get_user_games',
                       http_method='GET')
@@ -218,7 +218,7 @@ class GuessANumberApi(remote.Service):
             user2_games_form_list = [game.to_form('{name} is player 2 in this game'.
                        format(name='user.name')) for game in games]
             games_form_list = user1_games_form_list + user2_games_form_list
-            return GameForms(
+            return UserGameForms(
                 user=user.to_form(),
                 games=games_form_list)
         else:
