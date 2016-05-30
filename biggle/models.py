@@ -15,6 +15,7 @@ class User(ndb.Model):
     """User profile"""
     name = ndb.StringProperty(required=True)
     email = ndb.StringProperty()
+    games = ndb.PickleProperty(default=[])
 
     def to_form(self):
         """Returns a GameForm representation of the Game"""

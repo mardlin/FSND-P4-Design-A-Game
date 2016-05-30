@@ -71,6 +71,7 @@ class GuessANumberApi(remote.Service):
                     'A User named %s does not exist!' % user2_name)
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
+            # user1.games.append
         except:
             raise endpoints.BadRequestException('Bad request')
         # Use a task queue to update the average turns remaining.
