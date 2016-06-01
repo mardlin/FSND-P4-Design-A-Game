@@ -60,22 +60,6 @@ given time. Each game can be retrieved or played by using the path parameter
     - Parameters: urlsafe_game_key, guess
     - Returns: GameForm with new game state.
     - Description: Accepts a 'guess' and returns the updated state of the game.
-    If this causes a game to end, a corresponding Score entity will be created.
-    
- - **get_scores**
-    - Path: 'scores'
-    - Method: GET
-    - Parameters: None
-    - Returns: ScoreForms.
-    - Description: Returns all Scores in the database (unordered).
-    
- - **get_user_scores**
-    - Path: 'scores/user/{user_name}'
-    - Method: GET
-    - Parameters: user_name
-    - Returns: ScoreForms. 
-    - Description: Returns all Scores recorded by the provided player (unordered).
-    Will raise a NotFoundException if the User does not exist.
     
  - **get_active_game_count**
     - Path: 'games/active'
@@ -92,8 +76,6 @@ given time. Each game can be retrieved or played by using the path parameter
  - **Game**
     - Stores unique game states. Associated with User model via KeyProperty.
     
- - **Score**
-    - Records completed games. Associated with Users model via KeyProperty.
     
 ##Forms Included:
  - **GameForm**
@@ -103,10 +85,5 @@ given time. Each game can be retrieved or played by using the path parameter
     - Used to create a new game (user_name, min, max, attempts)
  - **MakeMoveForm**
     - Inbound make move form (guess).
- - **ScoreForm**
-    - Representation of a completed game's Score (user_name, date, won flag,
-    guesses).
- - **ScoreForms**
-    - Multiple ScoreForm container.
  - **StringMessage**
     - General purpose String container.
