@@ -13,9 +13,10 @@ from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
+from google.appengine.ext import ndb
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms
+    ScoreForms, UserGameForms
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -71,6 +72,8 @@ class GuessANumberApi(remote.Service):
                     'A User named %s does not exist!' % user2_name)
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
+            user1.games.append(game.key)
+            user2.games.append(game.key)
         except:
             raise endpoints.BadRequestException('Bad request')
         # Use a task queue to update the average turns remaining.
@@ -208,7 +211,7 @@ class GuessANumberApi(remote.Service):
             message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
 
     @endpoints.method(request_message=USER_GAMES_REQUEST,
-                      response_message=GameForms,
+                      response_message=UserGameForms,
                       path='user/{urlsafe_user_key}',
                       name='get_user_games',
                       http_method='GET')
@@ -216,13 +219,21 @@ class GuessANumberApi(remote.Service):
         """Return the a list of game states for a user ."""
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
-            print user.name
-            games = Game.query(Game.user1 == user.key or
-                               Game.user2 == user.key)
-            return GameForms(
+            games_list = []
+            for index, key in enumerate(user.games):
+                # game_key = ndb.Key(urlsafe=key)
+                # games_list.append(game_key.get())
+                try:
+                    game_key = ndb.Key(urlsafe=key)    
+                except TypeError as e:
+                    print "Type error on index {}: {} ".format(index, e)
+                else:
+                    games_list.append(game_key.get())
+            return UserGameForms(
                 user=user.to_form(),
                 games=[game.to_form('{name} is a player in this game'.
-                       format(name='user.name')) for game in games])
+                                    format(name=user.name)) for game in games_list
+                       ])
         else:
             raise endpoints.NotFoundException('User not found!')
 
