@@ -95,7 +95,6 @@ class Game(ndb.Model):
                 loser = self.user1
                 self.winner = self.user2
         self.game_over = True
-        print "I ran"
         self.put()
         return self.winner, loser
 
