@@ -38,6 +38,7 @@ class Game(ndb.Model):
     user1_is_next = ndb.BooleanProperty(required=True, default=True)
     game_over = ndb.BooleanProperty(required=True, default=False)
     game_cancelled = ndb.BooleanProperty(required=True, default=False)
+    winner = ndb.KeyProperty(kind='User')
 
     @classmethod
     def new_game(cls, user1, user2, turns):
@@ -82,11 +83,22 @@ class Game(ndb.Model):
         form.message = message
         return form
 
-    def end_game(self, won=False):
+    def end_game(self, cancelled_by=None, winner=None):
         """Ends the game - if won is True, the player won. - if won is False,
         the player lost."""
+        if cancelled_by is not None:
+        #  make the non-cancelling user the winner
+            if (cancelled_by == self.user2):
+                loser = self.user2
+                self.winner = self.user1
+            else: 
+                loser = self.user1
+                self.winner = self.user2
         self.game_over = True
+        print "I ran"
         self.put()
+        return self.winner, loser
+
 
 
 class UserForm(messages.Message):
@@ -123,6 +135,12 @@ class NewGameForm(messages.Message):
 
 
 class MakeMoveForm(messages.Message):
+    """Used to make a move in an existing game"""
+    user_name = messages.StringField(1, required=True)
+    guess = messages.StringField(2, required=True)
+
+
+class EndGameForm(messages.Message):
     """Used to make a move in an existing game"""
     user_name = messages.StringField(1, required=True)
     guess = messages.StringField(2, required=True)

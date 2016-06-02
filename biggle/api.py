@@ -16,7 +16,7 @@ from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 from models import User, Game
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    UserGameForms
+    UserGameForms, EndGameForm
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -28,15 +28,20 @@ USER_GAMES_REQUEST = endpoints.ResourceContainer(
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
-USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
-                                           email=messages.StringField(2))
+USER_REQUEST = endpoints.ResourceContainer(
+                    user_name=messages.StringField(1),
+                    email=messages.StringField(2),)
+CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
+                            user_name=messages.StringField(1),
+                            urlsafe_game_key=messages.StringField(2),)
+
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 
 #  ## --- Endpoints  --- ##  #
-@endpoints.api(name='guess_a_number', version='v1')
-class GuessANumberApi(remote.Service):
+@endpoints.api(name='boggle', version='v1')
+class BoggleApi(remote.Service):
     """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
@@ -72,14 +77,19 @@ class GuessANumberApi(remote.Service):
                     'A User named %s does not exist!' % user2_name)
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
+            # print user1.key, user2.key
             user1.games.append(game.key)
             user2.games.append(game.key)
         except:
             raise endpoints.BadRequestException('Bad request')
+        else:
+            user1.put()
+            user2.put()
         # Use a task queue to update the average turns remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         # taskqueue.add(url='/tasks/cache_average_turns')
+
         return game.to_form('Good luck playing biggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -118,9 +128,9 @@ class GuessANumberApi(remote.Service):
             whose_turn = game.user1
         if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
-
-        # OK then. This turn is happening!
-        # Give the next turn to the other user
+        # All these checks have passed, so the turn can proceed, and the game 
+        # will be updated:
+        msg = ""
         game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
         # make the submitted word all caps for checking.
@@ -171,7 +181,7 @@ class GuessANumberApi(remote.Service):
                 'Correct! {} points for the word "{}"'
                 .format(points, guess)
                 )
-
+        # This bit is totally out of order and msg is not defined. 
         if game.turns_remaining < 1:
             game.end_game(False)
             return game.to_form(msg + ' Game over!')
@@ -187,6 +197,26 @@ class GuessANumberApi(remote.Service):
         """Get the cached average moves remaining"""
         return StringMessage(
             message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+
+    @endpoints.method(request_message=CANCEL_GAME_REQUEST,
+                      response_message=GameForm,
+                      path='games/{urlsafe_game_key}/cancel',
+                      name='cancel_game',
+                      http_method='PUT')
+    def cancel_game(self, request):
+        """Allow a user to forfeit by cancelling a game"""        
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game.game_over:
+            return game.to_form('Game already over!')
+        user = User.query(User.name == request.user_name).get()
+        if game.key not in user.games:
+            return game.to_form('Only the participants can cancel a game')
+        # make the other user the winner
+        w, l = game.end_game(cancelled_by=user.key)
+        winner = w.get()
+        loser = l.get()
+        return game.to_form("{} cancelled the game. {} wins!"
+                            .format(loser.name, winner.name))
 
     @endpoints.method(request_message=USER_GAMES_REQUEST,
                       response_message=UserGameForms,
@@ -228,4 +258,4 @@ class GuessANumberApi(remote.Service):
                          'The average moves remaining is {:.2f}'.format(average))
 
 
-api = endpoints.api_server([GuessANumberApi])
+api = endpoints.api_server([BoggleApi])
