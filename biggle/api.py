@@ -130,9 +130,9 @@ class BoggleApi(remote.Service):
             return game.to_form('It\'s not your turn')
         # All these checks have passed, so the turn can proceed, and the game 
         # will be updated:
-        msg = ""
         game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
+        msg = ""
         # make the submitted word all caps for checking.
         guess = request.guess.upper()
         # Check that the word is in the dictionary:
@@ -149,26 +149,15 @@ class BoggleApi(remote.Service):
         parsed_xml = ET.fromstring(dict_lookup.content)
         entry = parsed_xml.find('entry')
         if entry is None:
-            game.put()
-            return game.to_form(
-                'Sorry! "{}" is not in the english dictionary'.format(guess)
-                )
-
+            msg += 'Sorry! "{}" is not in the english dictionary'.format(guess)
         # Check that this word hasn't already been found
-        if guess in game.words_found:
-            game.put()
-            return game.to_form(
-                'Sorry! "{}" that word has already been found'.format(guess)
-                )
-
+        elif guess in game.words_found:
+            msg +='Sorry! "{}" that word has already been found'.format(guess)
         # Check that the word can be found on the board
-        if not game.check_word(guess):
-            game.put()
-            return game.to_form(
-                'Sorry! The word "{}" is not in the board.'
-                .format(guess)
-                )
+        elif not game.check_word(guess):
+            msg += 'Sorry! The word "{}" is not in the board.'.format(guess)
         else:
+            # The word passes all our checks
             # calculate and add points to the users's total for this game
             points = word_points(guess)
             game.words_found.append(guess)
@@ -176,17 +165,14 @@ class BoggleApi(remote.Service):
                 game.user1_points += points
             else:
                 game.user2_points += points
-            game.put()
-            return game.to_form(
-                'Correct! {} points for the word "{}"'
-                .format(points, guess)
-                )
-        # This bit is totally out of order and msg is not defined. 
+            msg += 'Correct! {} points for the word "{}"'.format(points, guess)
+        game.put()
         if game.turns_remaining < 1:
-            game.end_game(False)
+            game.turns_remaining = 0
+            w, l = game.end_game(False)
+            msg += "{} wins!".format(w.get().name)
             return game.to_form(msg + ' Game over!')
         else:
-            game.put()
             return game.to_form(msg)
 
     @endpoints.method(response_message=StringMessage,

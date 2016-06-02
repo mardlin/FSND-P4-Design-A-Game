@@ -81,23 +81,30 @@ class Game(ndb.Model):
         form.words_found = json.dumps(self.words_found)
         form.game_over = self.game_over
         form.message = message
+        if self.winner is not None:
+            form.winner = self.winner.get().name
         return form
 
-    def end_game(self, cancelled_by=None, winner=None):
+    def end_game(self, cancelled_by=None):
         """Ends the game - if won is True, the player won. - if won is False,
         the player lost."""
         if cancelled_by is not None:
-        #  make the non-cancelling user the winner
+            #  make the non-cancelling user the winner
             if (cancelled_by == self.user2):
                 loser = self.user2
                 self.winner = self.user1
-            else: 
+            else:
                 loser = self.user1
                 self.winner = self.user2
+        elif user1_points > user2_points:
+            self.winner = user1        
+        elif user2_points > user1_points:
+            self.winner = user2
+        else:
+            self.winner = None
         self.game_over = True
         self.put()
         return self.winner, loser
-
 
 
 class UserForm(messages.Message):
@@ -118,6 +125,7 @@ class GameForm(messages.Message):
     game_over = messages.BooleanField(9, required=True)
     board = messages.StringField(10)
     words_found = messages.StringField(11)
+    winner = messages.StringField(12)
 
 
 class UserGameForms(messages.Message):
