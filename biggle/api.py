@@ -236,6 +236,14 @@ class BoggleApi(remote.Service):
         else:
             raise endpoints.NotFoundException('User not found!')
 
+    @endpoints.method(response_message=UserRankingsForm,
+                      path='user/rankings',
+                      name='get_user_rankings',
+                      http_method='GET')
+    def get_user_games(self, request):
+        #  
+        pass
+
     @staticmethod
     def _cache_average_turns():
         """Populates memcache with the average moves remaining of Games"""
