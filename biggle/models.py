@@ -93,26 +93,28 @@ class Game(ndb.Model):
         if cancelled_by is not None:
             #  make the non-cancelling user the winner
             if (cancelled_by == self.user2):
-                loser = self.user2
-                self.winner = self.user1
+                w, l = self.user1, self.user2
             else:
-                loser = self.user1
-                self.winner = self.user2
-        elif user1_points > user2_points:
-            self.winner = user1        
-        elif user2_points > user1_points:
-            self.winner = user2
+                w, l = self.user2, self.user1 
+        # else the game ended because turns_remaining<1                
+        elif self.user1_points > self.user2_points:
+            w, l = self.user1, self.user2
+        elif self.user2_points > self.user1_points:
+            w, l = self.user1, self.user2
         else:
-            self.winner = None
-        winning_user = self.winner.get()
-        losing_user = loser.get()
+            # players are tied
+            w, l = None, None
+        # update user entities and the game entity accordingly
+        winning_user = w.get()
         winning_user.wins += 1
         winning_user.put()
+        losing_user = l.get()
         losing_user.losses += 1
         losing_user.put()
+        self.winner = w
         self.game_over = True
         self.put()
-        return self.winner, loser
+        return w, l
 
 
 class UserForm(messages.Message):

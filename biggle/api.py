@@ -169,8 +169,9 @@ class BoggleApi(remote.Service):
         game.put()
         if game.turns_remaining < 1:
             game.turns_remaining = 0
-            w, l = game.end_game(False)
-            msg += "{} wins!".format(w.get().name)
+            w, l = game.end_game()
+            winner = w.get()
+            msg += "{} wins!".format(winner.name)
             return game.to_form(msg + ' Game over!')
         else:
             return game.to_form(msg)
