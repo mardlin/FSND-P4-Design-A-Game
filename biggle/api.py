@@ -6,6 +6,7 @@ primarily with communication to/from the API's users."""
 
 
 import logging
+import sys
 import endpoints
 import xml.etree.ElementTree as ET
 from boggle import word_points
@@ -214,20 +215,23 @@ class BoggleApi(remote.Service):
         """Return the a list of game states for a user ."""
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
+            print user.games
             games_list = []
             for index, key in enumerate(user.games):
-                # game_key = ndb.Key(urlsafe=key)
-                # games_list.append(game_key.get())
                 try:
-                    game_key = ndb.Key(urlsafe=key)    
+                    game = key.get()
                 except TypeError as e:
                     print "Type error on index {}: {} ".format(index, e)
+                except Exception as e:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    print exc_type, exc_obj
                 else:
-                    games_list.append(game_key.get())
+                    games_list.append(game)
             return UserGameForms(
                 user=user.to_form(),
-                games=[game.to_form('{name} is a player in this game'.
-                                    format(name=user.name)) for game in games_list
+                games=[game.to_form(
+                        '{name} is a player in this game'.
+                        format(name=user.name)) for game in games_list
                        ])
         else:
             raise endpoints.NotFoundException('User not found!')
