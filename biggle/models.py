@@ -26,6 +26,10 @@ class User(ndb.Model):
         form.name = self.name
         return form
 
+    def win_loss_ratio(self):
+        r = self.wins/self.losses
+        return r
+
 
 class Game(ndb.Model):
     """Game object"""
