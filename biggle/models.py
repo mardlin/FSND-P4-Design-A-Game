@@ -52,13 +52,14 @@ class Game(ndb.Model):
     board = ndb.PickleProperty(required=True)  # NxN list of letters
     user1_points = ndb.IntegerProperty(required=True, default=0)
     user2_points = ndb.IntegerProperty(required=True, default=0)
-    words_found = ndb.PickleProperty(required=True, default=[""])
+    words_found = ndb.PickleProperty(required=True, default=[])
     turns_allowed = ndb.IntegerProperty(required=True)
     turns_remaining = ndb.IntegerProperty(required=True)
     user1_is_next = ndb.BooleanProperty(required=True, default=True)
     game_over = ndb.BooleanProperty(required=True, default=False)
     game_cancelled = ndb.BooleanProperty(required=True, default=False)
     winner = ndb.KeyProperty(kind='User')
+    history = ndb.PickleProperty(required=True, default=[])
 
     @classmethod
     def new_game(cls, user1, user2, turns):
@@ -105,6 +106,13 @@ class Game(ndb.Model):
             form.winner = self.winner.get().name
         return form
 
+    def enter_history(self, user, message):
+        self.history.append({
+            'user': user.name,
+            'message': message
+            })
+        self.put()
+
     def end_game(self, cancelled_by=None):
         """Ends the game - if won is True, the player won. - if won is False,
         the player lost."""
@@ -113,8 +121,8 @@ class Game(ndb.Model):
             if (cancelled_by == self.user2):
                 w, l = self.user1, self.user2
             else:
-                w, l = self.user2, self.user1 
-        # else the game ended because turns_remaining<1                
+                w, l = self.user2, self.user1
+        # else the game ended because turns_remaining<1
         elif self.user1_points > self.user2_points:
             w, l = self.user1, self.user2
         elif self.user2_points > self.user1_points:
@@ -187,10 +195,9 @@ class MakeMoveForm(messages.Message):
     guess = messages.StringField(2, required=True)
 
 
-class EndGameForm(messages.Message):
-    """Used to make a move in an existing game"""
-    user_name = messages.StringField(1, required=True)
-    guess = messages.StringField(2, required=True)
+class GameHistoryForm(messages.Message):
+    game = messages.MessageField(GameForm, 1, required=True)
+    turns = messages.StringField(2, repeated=True)
 
 
 class StringMessage(messages.Message):
