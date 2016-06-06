@@ -6,6 +6,7 @@ primarily with communication to/from the API's users."""
 
 
 import logging
+import sys
 import endpoints
 import xml.etree.ElementTree as ET
 from boggle import word_points
@@ -16,7 +17,7 @@ from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 from models import User, Game
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    UserGameForms, EndGameForm
+    UserPerformanceForms, UserGameForms, EndGameForm
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -29,11 +30,11 @@ MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
 USER_REQUEST = endpoints.ResourceContainer(
-                    user_name=messages.StringField(1),
-                    email=messages.StringField(2),)
+    user_name=messages.StringField(1),
+    email=messages.StringField(2),)
 CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
-                            user_name=messages.StringField(1),
-                            urlsafe_game_key=messages.StringField(2),)
+    user_name=messages.StringField(1),
+    urlsafe_game_key=messages.StringField(2),)
 
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
@@ -169,8 +170,9 @@ class BoggleApi(remote.Service):
         game.put()
         if game.turns_remaining < 1:
             game.turns_remaining = 0
-            w, l = game.end_game(False)
-            msg += "{} wins!".format(w.get().name)
+            w, l = game.end_game()
+            winner = w.get()
+            msg += "{} wins!".format(winner.name)
             return game.to_form(msg + ' Game over!')
         else:
             return game.to_form(msg)
@@ -213,23 +215,45 @@ class BoggleApi(remote.Service):
         """Return the a list of game states for a user ."""
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
+            print user.games
             games_list = []
             for index, key in enumerate(user.games):
-                # game_key = ndb.Key(urlsafe=key)
-                # games_list.append(game_key.get())
                 try:
-                    game_key = ndb.Key(urlsafe=key)    
+                    game = key.get()
                 except TypeError as e:
                     print "Type error on index {}: {} ".format(index, e)
+                except Exception as e:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    print exc_type, exc_obj
                 else:
-                    games_list.append(game_key.get())
+                    games_list.append(game)
             return UserGameForms(
                 user=user.to_form(),
-                games=[game.to_form('{name} is a player in this game'.
-                                    format(name=user.name)) for game in games_list
+                games=[game.to_form(
+                        '{name} is a player in this game'.
+                        format(name=user.name)) for game in games_list
                        ])
         else:
             raise endpoints.NotFoundException('User not found!')
+
+    #  probably need to create a form for this
+    @endpoints.method(response_message=UserPerformanceForms,
+                      path='user_rankings',
+                      name='get_user_rankings',
+                      http_method='GET')
+    def get_user_rankings(self,request):
+        """Returns a list of users ranked by win_percentage and then 
+        by totals wins."""
+        users = User.query()
+        users = users.order(-User.wins)
+        # win_percentage is derived from an entity method, so we can't us
+        # the query.order method. We'll use a list sort instead.
+        users_list = [u.to_performance_form() for u in users]
+        users_list.sort(key = lambda user: -user.win_percentage)
+        response = UserPerformanceForms(
+            users= users_list
+            )
+        return response
 
     @staticmethod
     def _cache_average_turns():

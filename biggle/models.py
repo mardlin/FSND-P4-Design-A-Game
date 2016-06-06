@@ -6,6 +6,7 @@ import random
 import json
 import boggle
 import generate_board
+from decimal import Decimal
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -16,12 +17,31 @@ class User(ndb.Model):
     name = ndb.StringProperty(required=True)
     email = ndb.StringProperty()
     games = ndb.PickleProperty(required=True, default=[""])
+    wins = ndb.IntegerProperty(required=True, default=0)
+    losses = ndb.IntegerProperty(required=True, default=0)
 
     def to_form(self):
         """Returns a GameForm representation of the Game"""
         form = UserForm()
         form.urlsafe_key = self.key.urlsafe()
         form.name = self.name
+        return form
+
+    def win_percentage(self):
+        if self.wins + self.losses < 1:
+            return float(0)
+        else:
+            percentage = Decimal(self.wins)/Decimal((self.wins+self.losses))
+            p = round(percentage, 3)
+            return float(p)
+
+    def to_performance_form(self):
+        form = UserPerformanceForm()
+        form.name = self.name
+        form.win_percentage = self.win_percentage()
+        form.wins = self.wins
+        form.losses = self.losses
+        form.urlsafe_key = self.key.urlsafe()
         return form
 
 
@@ -91,25 +111,45 @@ class Game(ndb.Model):
         if cancelled_by is not None:
             #  make the non-cancelling user the winner
             if (cancelled_by == self.user2):
-                loser = self.user2
-                self.winner = self.user1
+                w, l = self.user1, self.user2
             else:
-                loser = self.user1
-                self.winner = self.user2
-        elif user1_points > user2_points:
-            self.winner = user1        
-        elif user2_points > user1_points:
-            self.winner = user2
+                w, l = self.user2, self.user1 
+        # else the game ended because turns_remaining<1                
+        elif self.user1_points > self.user2_points:
+            w, l = self.user1, self.user2
+        elif self.user2_points > self.user1_points:
+            w, l = self.user1, self.user2
         else:
-            self.winner = None
+            # players are tied
+            w, l = None, None
+        # update user entities and the game entity accordingly
+        winning_user = w.get()
+        winning_user.wins += 1
+        winning_user.put()
+        losing_user = l.get()
+        losing_user.losses += 1
+        losing_user.put()
+        self.winner = w
         self.game_over = True
         self.put()
-        return self.winner, loser
+        return w, l
 
 
 class UserForm(messages.Message):
     urlsafe_key = messages.StringField(1, required=True)
     name = messages.StringField(2, required=True)
+
+
+class UserPerformanceForm(messages.Message):
+    name = messages.StringField(1, required=True)
+    win_percentage = messages.FloatField(2, required=True)
+    wins = messages.IntegerField(3, required=True)
+    losses = messages.IntegerField(4, required=True)
+    urlsafe_key = messages.StringField(5, required=True)
+
+
+class UserPerformanceForms(messages.Message):
+    users = messages.MessageField(UserPerformanceForm, 1, repeated=True)
 
 
 class GameForm(messages.Message):
