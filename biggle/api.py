@@ -17,7 +17,7 @@ from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 from models import User, Game
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    UserGameForms, EndGameForm
+    UserPerformanceForms, UserGameForms, EndGameForm
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -236,13 +236,24 @@ class BoggleApi(remote.Service):
         else:
             raise endpoints.NotFoundException('User not found!')
 
-    @endpoints.method(response_message=UserRankingsForm,
-                      path='user/rankings',
+    #  probably need to create a form for this
+    @endpoints.method(response_message=UserPerformanceForms,
+                      path='user_rankings',
                       name='get_user_rankings',
                       http_method='GET')
-    def get_user_games(self, request):
-        #  
-        pass
+    def get_user_rankings(self,request):
+        """Returns a list of users ranked by win_percentage and then 
+        by totals wins."""
+        users = User.query()
+        users = users.order(-User.wins)
+        # win_percentage is derived from an entity method, so we can't us
+        # the query.order method. We'll use a list sort instead.
+        users_list = [u.to_performance_form() for u in users]
+        users_list.sort(key = lambda user: -user.win_percentage)
+        response = UserPerformanceForms(
+            users= users_list
+            )
+        return response
 
     @staticmethod
     def _cache_average_turns():

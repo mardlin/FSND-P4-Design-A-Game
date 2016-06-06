@@ -6,6 +6,7 @@ import random
 import json
 import boggle
 import generate_board
+from decimal import Decimal
 from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
@@ -26,9 +27,22 @@ class User(ndb.Model):
         form.name = self.name
         return form
 
-    def win_loss_ratio(self):
-        r = self.wins/self.losses
-        return r
+    def win_percentage(self):
+        if self.wins + self.losses < 1:
+            return float(0)
+        else:
+            percentage = Decimal(self.wins)/Decimal((self.wins+self.losses))
+            p = round(percentage, 3)
+            return float(p)
+
+    def to_performance_form(self):
+        form = UserPerformanceForm()
+        form.name = self.name
+        form.win_percentage = self.win_percentage()
+        form.wins = self.wins
+        form.losses = self.losses
+        form.urlsafe_key = self.key.urlsafe()
+        return form
 
 
 class Game(ndb.Model):
@@ -124,6 +138,18 @@ class Game(ndb.Model):
 class UserForm(messages.Message):
     urlsafe_key = messages.StringField(1, required=True)
     name = messages.StringField(2, required=True)
+
+
+class UserPerformanceForm(messages.Message):
+    name = messages.StringField(1, required=True)
+    win_percentage = messages.FloatField(2, required=True)
+    wins = messages.IntegerField(3, required=True)
+    losses = messages.IntegerField(4, required=True)
+    urlsafe_key = messages.StringField(5, required=True)
+
+
+class UserPerformanceForms(messages.Message):
+    users = messages.MessageField(UserPerformanceForm, 1, repeated=True)
 
 
 class GameForm(messages.Message):
