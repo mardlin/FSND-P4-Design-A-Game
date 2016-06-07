@@ -274,11 +274,6 @@ class BoggleApi(remote.Service):
         else:
             raise endpoints.NotFoundException('Game not found!')
 
-
-    
-    
-
-
     @staticmethod
     def _cache_average_turns():
         """Populates memcache with the average moves remaining of Games"""
