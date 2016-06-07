@@ -6,6 +6,7 @@ primarily with communication to/from the API's users."""
 
 
 import logging
+import json
 import sys
 import endpoints
 import xml.etree.ElementTree as ET
@@ -16,8 +17,8 @@ from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 from models import User, Game
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    UserPerformanceForms, UserGameForms, EndGameForm
+from models import StringMessage, NewGameForm, GameForm, MakeMoveForm
+from models import UserPerformanceForms, UserGameForms, GameHistoryForm
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -173,8 +174,10 @@ class BoggleApi(remote.Service):
             w, l = game.end_game()
             winner = w.get()
             msg += "{} wins!".format(winner.name)
+            game.enter_history(user, msg)
             return game.to_form(msg + ' Game over!')
         else:
+            game.enter_history(user, msg)
             return game.to_form(msg)
 
     @endpoints.method(response_message=StringMessage,
@@ -236,7 +239,6 @@ class BoggleApi(remote.Service):
         else:
             raise endpoints.NotFoundException('User not found!')
 
-    #  probably need to create a form for this
     @endpoints.method(response_message=UserPerformanceForms,
                       path='user_rankings',
                       name='get_user_rankings',
@@ -254,6 +256,23 @@ class BoggleApi(remote.Service):
             users= users_list
             )
         return response
+
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=GameHistoryForm,
+                      path='games/{urlsafe_game_key}/history',
+                      name='get_game_history',
+                      http_method='GET')
+    def get_game_history(self,request):
+        """Returns the history of moves for a game."""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game is not None:
+            response = GameHistoryForm(
+                game = game.to_form('Here is the history of this game'),
+                turns = [json.dumps(turn) for turn in game.history]
+            )
+            return response
+        else:
+            raise endpoints.NotFoundException('Game not found!')
 
     @staticmethod
     def _cache_average_turns():
