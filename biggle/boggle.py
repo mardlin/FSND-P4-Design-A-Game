@@ -1,7 +1,6 @@
 """boggle.py - This file contains the functions which generate a
-boggle board, and determine if the word exists on the board. 
+boggle board, and determine if the word exists on the board."""
 
-"""
 
 def _find_in_row(letter, row):
     """

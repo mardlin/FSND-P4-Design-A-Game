@@ -5,20 +5,31 @@ move game logic to another file. Ideally the API will be simple, concerned
 primarily with communication to/from the API's users."""
 
 
-import logging
 import json
 import sys
-import endpoints
 import xml.etree.ElementTree as ET
-from boggle import word_points
-from protorpc import remote, messages
-from google.appengine.api import memcache
-from google.appengine.api import taskqueue
-from google.appengine.api import urlfetch
+
+import endpoints
+from google.appengine.api import (
+    memcache,
+    taskqueue,
+    urlfetch
+)
 from google.appengine.ext import ndb
-from models import User, Game
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm
-from models import UserPerformanceForms, UserGameForms, GameHistoryForm
+from protorpc import remote, messages
+
+from boggle import word_points
+from models import (
+    User, 
+    Game, 
+    StringMessage,
+    NewGameForm,
+    GameForm, 
+    MakeMoveForm, 
+    UserPerformanceForms,
+    UserGameForms,
+    GameHistoryForm
+)
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #

@@ -1,8 +1,13 @@
 """utils.py - File for collecting general utility functions."""
 
-import logging
-from google.appengine.ext import ndb
 import endpoints
+from google.appengine.ext import ndb
+
+from models import (
+    User,
+    Game
+)
+
 
 def games_and_users():
     """A helper function to identify unfinished games, and their users.

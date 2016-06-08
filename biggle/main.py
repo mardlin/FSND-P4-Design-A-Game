@@ -2,15 +2,20 @@
 
 """main.py - This file contains handlers that are called by taskqueue and/or
 cronjobs."""
-import logging
 
+
+from google.appengine.api import (
+    mail,
+    app_identity
+)
 import webapp2
-from google.appengine.api import mail, app_identity
+
 from api import BoggleApi
-
-from models import User, Game
-
-
+from models import (
+    User,
+    Game
+)
+from utils import games_and_users
 
 
 class SendWaitingUserReminderEmail(webapp2.RequestHandler):
