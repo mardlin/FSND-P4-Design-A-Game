@@ -15,7 +15,7 @@ handlers:
 - url: /
   script: api.api
 
-- url: /tasks/cache_average_attempts
+- url: /tasks/cache_average_turns
   script: main.app
 
 - url: /crons/send_reminder

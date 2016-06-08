@@ -10,6 +10,8 @@ from api import BoggleApi
 
 from models import User
 
+## for testing purposes: 
+from datetime import datetime
 
 class SendReminderEmail(webapp2.RequestHandler):
     def get(self):
@@ -18,7 +20,12 @@ class SendReminderEmail(webapp2.RequestHandler):
         app_id = app_identity.get_application_id()
         users = User.query(User.email != None)
         for user in users:
-            subject = 'This is a reminder!'
+            # time added for testing
+            now = datetime.now()
+            h = now.hour
+            m = now.minute
+            s = now.second            
+            subject = 'This is a reminder! {}:{}:{}'.format(h, m, s)
             body = 'Hello {}, try out Guess A Number!'.format(user.name)
             # This will send test emails, the arguments to send_mail are:
             # from, to, subject, body
@@ -26,16 +33,18 @@ class SendReminderEmail(webapp2.RequestHandler):
                            user.email,
                            subject,
                            body)
+            print "email sent with subject: {}".format(subject)
 
 
 class UpdateAverageMovesRemaining(webapp2.RequestHandler):
     def post(self):
         """Update game listing announcement in memcache."""
-        BoggleApi._cache_average_attempts()
+        print "running"
+        BoggleApi._cache_average_turns()
         self.response.set_status(204)
 
 
 app = webapp2.WSGIApplication([
     ('/crons/send_reminder', SendReminderEmail),
-    ('/tasks/cache_average_attempts', UpdateAverageMovesRemaining),
+    ('/tasks/cache_average_turns', UpdateAverageMovesRemaining),
 ], debug=True)
