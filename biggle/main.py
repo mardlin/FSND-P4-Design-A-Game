@@ -83,8 +83,8 @@ class SendNextUserReminderEmail(webapp2.RequestHandler):
                 body = '''Hello {a}, it\'s your turn to find a word
                         in the game: {b}! {c} is waiting for you!'''.format(
                         a=next_user.name,
-                        b=waiting_user.name,
-                        c=urlsafe_game_key)
+                        b=urlsafe_game_key,
+                        c=waiting_user.name)
                 # This will send test emails, the arguments to send_mail are:
                 # from, to, subject, body
                 mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),
