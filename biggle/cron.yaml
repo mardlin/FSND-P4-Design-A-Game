@@ -1,4 +1,10 @@
 cron:
-- description: Send a reminder email to all users
-  url: /crons/send_reminder
+- description: Send a reminder email to all next turn users
+  url: /crons/send_next_reminder
   schedule: every 1 hours
+
+- description: Send a reminder email to all waitingusers
+  url: /crons/send_waiting_reminder
+  schedule: every 3 hours
+
+
