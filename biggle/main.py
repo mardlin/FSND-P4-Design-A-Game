@@ -11,28 +11,6 @@ from api import BoggleApi
 from models import User, Game
 
 
-def games_and_users():
-    """A helper function to identify unfinished games, and their users.
-    Returns a 3-tuple of:
-    0. the game,
-    2. the user who has the next turn,
-    3. the waiting user
-    """
-    open_games = Game.query(Game.game_over == False).fetch()
-    games_list = []
-    for game in open_games:
-        if game.user1_is_next:
-            # create a tuple for storing the next user and url safe game key
-            games_list.append((game.key.urlsafe(),
-                              game.user1.get(),
-                              game.user2.get())
-                              )
-        else:
-            games_list.append((game.key.urlsafe(),
-                              game.user2.get(),
-                              game.user1.get())
-                              )
-    return games_list
 
 
 class SendWaitingUserReminderEmail(webapp2.RequestHandler):
