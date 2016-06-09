@@ -10,11 +10,14 @@ from models import (
 
 
 def games_and_users():
-    """A helper function to identify unfinished games, and their users.
-    Returns a 3-tuple of:
-    0. the game,
-    2. the user who has the next turn,
-    3. the waiting user
+    """A helper function (used in main.py) to identify unfinished games,
+    and their users.
+
+    Returns:
+        a 3-tuple of:
+            - the game,
+            - the user who has the next turn,
+            - the waiting user
     """
     open_games = Game.query(Game.game_over == False).fetch()
     games_list = []

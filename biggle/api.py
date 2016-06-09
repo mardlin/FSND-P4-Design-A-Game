@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-`
-"""api.py - Create and configure the Game API exposing the resources.
-This can also contain game logic. For more complex games it would be wise to
-move game logic to another file. Ideally the API will be simple, concerned
-primarily with communication to/from the API's users."""
+"""api.py - This file creates and configure the Boggle API and exposes the
+resources.
+"""
 
 
 import json
@@ -54,14 +53,13 @@ MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 @endpoints.api(name='boggle', version='v1')
 class BoggleApi(remote.Service):
-    """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
                       path='user',
                       name='create_user',
                       http_method='POST')
     def create_user(self, request):
-        """Create a User. Requires a unique username"""
+        """Create a User. Requires a unique username."""
         if User.query(User.name == request.user_name).get():
             raise endpoints.ConflictException(
                     'A User with that name already exists!')
@@ -76,7 +74,11 @@ class BoggleApi(remote.Service):
                       name='new_game',
                       http_method='POST')
     def new_game(self, request):
-        """Creates new game"""
+        """Creates and responds with a new game.
+        Each game has a randomly generated board, two players, and
+        a customizable number of turns allowed. The Game model also contains
+        a number of variables for tracking the game state.
+        """
         user1_name = request.user1_name
         user1 = User.query(User.name == request.user1_name).get()
         if not user1:
@@ -87,9 +89,12 @@ class BoggleApi(remote.Service):
         if not user2:
             raise endpoints.NotFoundException(
                     'A User named %s does not exist!' % user2_name)
+        if user1.name == user2.name:
+            raise endpoints.NotFoundException(
+                'Sorry, you can\'t play against yourself'
+            )
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
-            # print user1.key, user2.key
             user1.games.append(game.key)
             user2.games.append(game.key)
         except:
@@ -101,7 +106,9 @@ class BoggleApi(remote.Service):
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_turns')
-
+        msg = 'Good luck playing boggle {} and {}.'.format(
+                user1.name, user2.name
+        )
         return game.to_form('Good luck playing biggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -110,7 +117,7 @@ class BoggleApi(remote.Service):
                       name='get_game',
                       http_method='GET')
     def get_game(self, request):
-        """Return the current game state."""
+        """Get the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game is not None:
             return game.to_form('Time to make a move!')
@@ -123,7 +130,11 @@ class BoggleApi(remote.Service):
                       name='make_move',
                       http_method='PUT')
     def make_move(self, request):
-        """Makes a move. Returns a game state with message"""
+        """A player submits a "guess" for a word found on the board.
+        The guess is checked for validity, and the game state updated
+        accordingly.
+        Returns a game state with message.
+        """
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
@@ -147,17 +158,19 @@ class BoggleApi(remote.Service):
         msg = ""
         # make the submitted word all caps for checking.
         guess = request.guess.upper()
-        # Check that the word is in the dictionary:
+        # Use the Merriam-Webster API to check that the word is in the
+        # English dictionary:
         dictionary_url = "http://www.dictionaryapi.com"\
                          "/api/v1/references/collegiate/xml/{word}?key={key}"
         dict_lookup = urlfetch.Fetch(
+            # I realize that publishing API keys on GitHub is bad practice,
+            # but for the purposes of this project, the risks are minimal.
             dictionary_url.format(word=guess,
                                   key='a910e27f-cb8e-4d10-9a2d-b8bf3530c02d')
         )
         # The Merriam-Webster API returns an XML string. If the word is found
         # the XML will contain an <entry> tag.
-        # This makes us of the ElementTree XML API module
-        # https://docs.python.org/2.7/library/xml.etree.elementtree.html
+        # Use the ElementTree XML API module to look for the <entry> tag
         parsed_xml = ET.fromstring(dict_lookup.content)
         entry = parsed_xml.find('entry')
         if entry is None:
@@ -205,7 +218,7 @@ class BoggleApi(remote.Service):
                       name='cancel_game',
                       http_method='PUT')
     def cancel_game(self, request):
-        """Allow a user to forfeit by cancelling a game"""
+        """Allow a user to forfeit by cancelling a game."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
@@ -225,7 +238,7 @@ class BoggleApi(remote.Service):
                       name='get_user_games',
                       http_method='GET')
     def get_user_games(self, request):
-        """Return the a list of game states for a user ."""
+        """Return the a list of game states for a user."""
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
             print user.games
@@ -243,9 +256,9 @@ class BoggleApi(remote.Service):
             return UserGameForms(
                 user=user.to_form(),
                 games=[game.to_form(
-                        '{name} is a player in this game'.
-                        format(name=user.name)) for game in games_list
-                       ])
+                    '{name} is a player in this game'.
+                    format(name=user.name)) for game in games_list]
+            )
         else:
             raise endpoints.NotFoundException('User not found!')
 

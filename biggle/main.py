@@ -3,7 +3,6 @@
 """main.py - This file contains handlers that are called by taskqueue and/or
 cronjobs."""
 
-
 from google.appengine.api import (
     mail,
     app_identity
@@ -43,8 +42,6 @@ class SendWaitingUserReminderEmail(webapp2.RequestHandler):
                                user.email,
                                subject,
                                body)
-                print "email sent with subject: {}".format(subject)
-                print "email sent with body: {}".format(body)
 
 
 class SendNextUserReminderEmail(webapp2.RequestHandler):
@@ -74,8 +71,6 @@ class SendNextUserReminderEmail(webapp2.RequestHandler):
                                next_user.email,
                                subject,
                                body)
-                print "email sent with subject: {}".format(subject)
-                print "email sent with body: {}".format(body)
 
 
 class UpdateAverageMovesRemaining(webapp2.RequestHandler):
