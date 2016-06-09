@@ -27,6 +27,7 @@ class User(ndb.Model):
         return form
 
     def win_percentage(self):
+        """Calculates the percentage of games won out of games played"""
         if self.wins + self.losses < 1:
             return float(0)
         else:
@@ -63,9 +64,7 @@ class Game(ndb.Model):
     @classmethod
     def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
-        # generate a 4x4 board
         board = boggle.board()
-
         game = Game(board=board,
                     user1=user1,
                     user2=user2,
@@ -143,11 +142,13 @@ class Game(ndb.Model):
 
 
 class UserForm(messages.Message):
+    """Simple form with basic user information"""
     urlsafe_key = messages.StringField(1, required=True)
     name = messages.StringField(2, required=True)
 
 
 class UserPerformanceForm(messages.Message):
+    """Form containing data about a user's win/loss history"""
     name = messages.StringField(1, required=True)
     win_percentage = messages.FloatField(2, required=True)
     wins = messages.IntegerField(3, required=True)
@@ -176,7 +177,7 @@ class GameForm(messages.Message):
 
 
 class UserGameForms(messages.Message):
-    """Return multiple GameForms for a User"""
+    """Multiple GameForms for a User"""
     user = messages.MessageField(UserForm, 1)
     games = messages.MessageField(GameForm, 2, repeated=True)
 
@@ -195,6 +196,9 @@ class MakeMoveForm(messages.Message):
 
 
 class GameHistoryForm(messages.Message):
+    """Contains a GameForm, and the game's history in the form of informative
+    messages for each turn.
+    """
     game = messages.MessageField(GameForm, 1, required=True)
     turns = messages.StringField(2, repeated=True)
 
