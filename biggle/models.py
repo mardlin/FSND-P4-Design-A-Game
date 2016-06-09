@@ -9,7 +9,6 @@ from google.appengine.ext import ndb
 from protorpc import messages
 
 import boggle
-import generate_board
 
 
 class User(ndb.Model):
@@ -65,7 +64,7 @@ class Game(ndb.Model):
     def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
         # generate a 4x4 board
-        board = generate_board.board()
+        board = boggle.board()
 
         game = Game(board=board,
                     user1=user1,
@@ -82,7 +81,7 @@ class Game(ndb.Model):
         """Returns a boolean value indicating whether the word
         can actually be constructed from the board.
         """
-        # use the boggle.find_letters() method to get a list of the coords
+        # use the boggle.find_letters() function to get a list of the coords
         # of the words
         word_coords = boggle.find_letters(word, self.board)
         # check for a continuous path among thos coordinates
