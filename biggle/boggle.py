@@ -11,8 +11,8 @@ def board():
 
     # The 16 die used in Boggle have the following 96 letters on their faces.
     # reference: http://everything2.com/title/Boggle
-    
-    die = [ 
+
+    die = [
         ["A", "E", "A", "N", "E", "G"],  ["W", "N", "G", "E", "E", "H"],
         ["A", "H", "S", "P", "C", "O"],  ["L", "N", "H", "N", "R", "Z"],
         ["A", "S", "P", "F", "F", "K"],  ["T", "S", "T", "I", "Y", "D"],
@@ -130,8 +130,8 @@ def path_test(path):
 
 
 def all_paths(word, word_coords):
-    """Given a word, and the coordinates of the letters in that word in a 
-    board, find all possible paths through those coordinates, and then run 
+    """Given a word, and the coordinates of the letters in that word in a
+    board, find all possible paths through those coordinates, and then run
     path_test() on each. If any path is valid, return True.
 
     This function is used in models.Game.check_word()
@@ -168,8 +168,8 @@ def all_paths(word, word_coords):
 def word_points(word):
     """Return the number of points earned by finding a word.
     The points scheme is taken from https://en.wikipedia.org/wiki/Boggle
-    
-    This function is used in the make_move endpoint. 
+
+    This function is used in the make_move endpoint.
     """
     l = len(word)
     if l < 3:

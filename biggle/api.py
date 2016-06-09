@@ -20,12 +20,12 @@ from protorpc import remote, messages
 
 from boggle import word_points
 from models import (
-    User, 
-    Game, 
+    User,
+    Game,
     StringMessage,
     NewGameForm,
-    GameForm, 
-    MakeMoveForm, 
+    GameForm,
+    MakeMoveForm,
     UserPerformanceForms,
     UserGameForms,
     GameHistoryForm
@@ -52,7 +52,6 @@ CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 
-#  ## --- Endpoints  --- ##  #
 @endpoints.api(name='boggle', version='v1')
 class BoggleApi(remote.Service):
     """Game API"""
@@ -128,7 +127,7 @@ class BoggleApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
-        user_name = request.user_name        
+        user_name = request.user_name
         user = User.query(User.name == request.user_name).get()
         if user is None:
             return game.to_form('Player not found.')
@@ -141,7 +140,7 @@ class BoggleApi(remote.Service):
             whose_turn = game.user1
         if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
-        # All these checks have passed, so the turn can proceed, and the game 
+        # All these checks have passed, so the turn can proceed, and the game
         # will be updated:
         game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
@@ -165,7 +164,7 @@ class BoggleApi(remote.Service):
             msg += 'Sorry! "{}" is not in the english dictionary'.format(guess)
         # Check that this word hasn't already been found
         elif guess in game.words_found:
-            msg +='Sorry! "{}" that word has already been found'.format(guess)
+            msg += 'Sorry! "{}" that word has already been found'.format(guess)
         # Check that the word can be found on the board
         elif not game.check_word(guess):
             msg += 'Sorry! The word "{}" is not in the board.'.format(guess)
@@ -206,7 +205,7 @@ class BoggleApi(remote.Service):
                       name='cancel_game',
                       http_method='PUT')
     def cancel_game(self, request):
-        """Allow a user to forfeit by cancelling a game"""        
+        """Allow a user to forfeit by cancelling a game"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
@@ -254,18 +253,16 @@ class BoggleApi(remote.Service):
                       path='user_rankings',
                       name='get_user_rankings',
                       http_method='GET')
-    def get_user_rankings(self,request):
-        """Returns a list of users ranked by win_percentage and then 
+    def get_user_rankings(self, request):
+        """Returns a list of users ranked by win_percentage and then
         by totals wins."""
         users = User.query()
         users = users.order(-User.wins)
-        # win_percentage is derived from an entity method, so we can't us
+        # win_percentage is derived from an entity method, so we can't use
         # the query.order method. We'll use a list sort instead.
         users_list = [u.to_performance_form() for u in users]
-        users_list.sort(key = lambda user: -user.win_percentage)
-        response = UserPerformanceForms(
-            users= users_list
-            )
+        users_list.sort(key=lambda user: -user.win_percentage)
+        response = UserPerformanceForms(users=users_list)
         return response
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -273,13 +270,13 @@ class BoggleApi(remote.Service):
                       path='games/{urlsafe_game_key}/history',
                       name='get_game_history',
                       http_method='GET')
-    def get_game_history(self,request):
+    def get_game_history(self, request):
         """Returns the history of moves for a game."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game is not None:
             response = GameHistoryForm(
-                game = game.to_form('Here is the history of this game'),
-                turns = [json.dumps(turn) for turn in game.history]
+                game=game.to_form('Here is the history of this game'),
+                turns=[json.dumps(turn) for turn in game.history]
             )
             return response
         else:
@@ -294,8 +291,9 @@ class BoggleApi(remote.Service):
             total_turns_remaining = sum([game.turns_remaining
                                         for game in games])
             average = float(total_turns_remaining)/count
-            memcache.set(MEMCACHE_MOVES_REMAINING,
-                         'The average moves remaining is {:.2f}'.format(average))
-
+            memcache.set(
+                MEMCACHE_MOVES_REMAINING,
+                'The average moves remaining is {:.2f}'.format(average)
+            )
 
 api = endpoints.api_server([BoggleApi])
