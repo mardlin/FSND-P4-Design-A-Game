@@ -76,6 +76,15 @@ class Game(ndb.Model):
         game.put()
         return game
 
+    def pretty_board(self):
+        """returns a more readable board"""
+        output = ""
+        for row in self.board:
+            for char in row:
+                output += char + " "
+            output += " | "
+        return output
+
     def check_word(self, word):
         """Returns a boolean value indicating whether the word
         can actually be constructed from the board.
@@ -96,7 +105,7 @@ class Game(ndb.Model):
         form.user2_points = self.user2_points
         form.user1_is_next = self.user1_is_next
         form.turns_remaining = self.turns_remaining
-        form.board = json.dumps(self.board)
+        form.board = self.pretty_board()
         form.words_found = json.dumps(self.words_found)
         form.game_over = self.game_over
         form.message = message

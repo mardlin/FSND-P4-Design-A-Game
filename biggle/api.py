@@ -53,6 +53,7 @@ MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 @endpoints.api(name='boggle', version='v1')
 class BoggleApi(remote.Service):
+    """A REST API for 2 player Boggle"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
                       path='user',
@@ -109,7 +110,7 @@ class BoggleApi(remote.Service):
         msg = 'Good luck playing boggle {} and {}.'.format(
                 user1.name, user2.name
         )
-        return game.to_form('Good luck playing biggle!')
+        return game.to_form('Good luck playing Boggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
