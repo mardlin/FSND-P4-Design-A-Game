@@ -215,7 +215,7 @@ class BoggleApi(remote.Service):
 
     @endpoints.method(request_message=CANCEL_GAME_REQUEST,
                       response_message=GameForm,
-                      path='games/{urlsafe_game_key}/cancel',
+                      path='game/{urlsafe_game_key}/cancel',
                       name='cancel_game',
                       http_method='PUT')
     def cancel_game(self, request):
