@@ -1,8 +1,39 @@
 """utils.py - File for collecting general utility functions."""
 
-import logging
-from google.appengine.ext import ndb
 import endpoints
+from google.appengine.ext import ndb
+
+from models import (
+    User,
+    Game
+)
+
+
+def games_and_users():
+    """A helper function (used in main.py) to identify unfinished games,
+    and their users.
+
+    Returns:
+        a 3-tuple of:
+            - the game,
+            - the user who has the next turn,
+            - the waiting user
+    """
+    open_games = Game.query(Game.game_over == False).fetch()
+    games_list = []
+    for game in open_games:
+        if game.user1_is_next:
+            # create a tuple for storing the next user and url safe game key
+            games_list.append((game.key.urlsafe(),
+                              game.user1.get(),
+                              game.user2.get())
+                              )
+        else:
+            games_list.append((game.key.urlsafe(),
+                              game.user2.get(),
+                              game.user1.get())
+                              )
+    return games_list
 
 
 def get_by_urlsafe(urlsafe, model):

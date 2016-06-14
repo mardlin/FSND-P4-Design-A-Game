@@ -1,126 +1,333 @@
-# Game API Project Overview
-In the Developing Scalable Apps with Python course you learned how to write platform-agnostic apps using Google App Engine backed by Google Datastore.
+# Boggle API
+
+The Boggle API provides a basic framework for a two player Boggle game, and ranking the performance of multiple players across multiple games. 
  
-In this project you will use these skills to develop your own game!
-You will write an API with endpoints that will allow anyone to develop a front-end for your game.
-Since you aren't required to write a front-end you can use API explorer to test your API.Let's get started!
+### Setup:
+
+The Boggle API runs on Google App Engine. 
+
+To run it locally:
+
+1. Install the [Google App Engine SDK for Python](https://cloud.google.com/appengine/downloads#Google_App_Engine_SDK_for_Python)
+2. Run the GoogleAppEngineLauncher. 
+3. Go to File > Add existing application 
+4. Choose the folder containing this project, with the `app.yaml` file at its top level
+5. Run the application
+6. Visit `localhost:{PORT}/_ah/api/explorer` in your browser. The value for `PORT` is found in the apps list of GoogleAppEngineLauncher. 
+7. The game can be played via the api explorer. 
+
+Refer to the rules and endpoints documentation below for further instructions.
+
+## Rules: 
+
+These are general rules explaining game play for this version of Boggle. 
+
+- Games are limited to two players/users.
+- Each game has a randomly generated Board of 16 letters arranged in a 4x4 grid.
+- Players take turns submitting a word they have found on the board.
+- Longer words are worth more points.
+- Refer to the "make_move" endpoint below for criteria for a valid word, and how points are awarded for a word.
+
+## Endpoints: 
+
+### create_user
+------
+
+Use this endpoint to create the users (or players) who will play boggle against each other. If an email address is included, it will be used to remind players when it is their turn to play.
+
+#### Request:
+
+`POST /create_user`
+
+##### Parameters: 
+
+- user_name
+- email (optional)
+
+#### Response:
+When a user has been succesfully created, this endpoint will respond with a success message like "User {{name}} created"
+
+
+### new_game
+------
+Creates and responds with a new game. Each game has a randomly generated board, two players, and a customizable number of turns allowed. 
+
+#### Request: 
+`POST /new_game`
+
+##### Parameters: 
+
+- user1_name 
+- user2_name 
+- turns     *game play will be limited to the number of turns chosen*
+
+Note: user1_name and user2_name must be unique, and match existing players
+
+#### Response:
+
+The response is a Game Form representation of the new game:
+
+```json
+{
+    "board": "R S P L  | E I B T  | U L Z A  | E S T I  | ",
+    "game_over": false,
+    "message": "Good luck playing Boggle!",
+    "turns_remaining": "4",
+    "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBEdhbWUYgICAgICAoAgM",
+    "user1_is_next": true,
+    "user1_name": "john",
+    "user1_points": "0",
+    "user2_name": "sarah",
+    "user2_points": "0",
+    "words_found": "[]"
+}
+```
+
+I recommend that players manually copy/paste the board into a text editor for easy access, and reformat it for readability:
+
+```
+R S P L 
+E I B T 
+U L Z A 
+E S T I 
+```
+
+### make_move
+------
+
+Using this endpoint, a user submits a "guess" for a word found on the board. The guess is checked for validity, and the game state updated accordingly. Returns a game state with message.
+
+#### The following are required in order to submit a guess
+
+- The game is not over
+- The user is a player in this game, and has the next turn
+
+If the requirements are not met, the response will contain an error message, and the game state will not be modified. 
+
+#### The following are required in order to successfuly find a word endpoint:
+
+- The word is english
+    - The [Merriam-Webster Dictionary API](http://www.dictionaryapi.com) is used for reference
+- The word can be found on the board, ie:
+    + Each of the letters in the word is present on the board, and the word can be spelled by moving in a **path** from one letter to the next in order. 
+    + A path is valid if each letter is adjacent to the previous, either above/below, to the side, or diagonally 
+    + No letter on the board can be used twice
+- The guess is not case-sensitive, ie. "WORD", "word", and "wORd" will all be treated equally.
+
+##### Points are awarded for a valid word based on the following scheme: 
+
+|   *Word length*  |  *Points*  |
+|   ---            |    ---     |
+|   less than 3    |    0       |    
+|   4 letters      |    1       |
+|   5              |    2       |   
+|   6              |    3       |
+|   7              |    5       |
+|   more than 7    |    11      |
+
+#### Request:
+
+`PUT /make_move/{urlsafe_game_key}`
+
+##### Parameters: 
+- user_name
+- guess
+
+**Example request:**
+```json
+{
+    "guess": "lisp",
+    "user_name": "john"
+}
+```
+
+#### Response:
+
+The response will be an updated Game Form for this game. 
+
+```json
+{
+    "board": "R QU P L  | E I B T  | U L Z A  | E S T I  | ",
+    "game_over": false,
+    "message": "Correct! 1 points for the word \"LISP\"",
+    "turns_remaining": "3",
+    "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBEdhbWUYgICAgICAoAgM",
+    "user1_is_next": false,
+    "user1_name": "john",
+    "user1_points": "1",
+    "user2_name": "sarah",
+    "user2_points": "0",
+    "words_found": "[\"LISP\"]"
+}
+```
+
+##### Notice what has been updated:
+
+- `turns_remaining` has decremented by 1
+- `user1_is_next` is toggled to `false`
+- `user1_points` is now 1
+- `"LISP"` has been appended to the `words_found` list
+
+
+### get_game
+---
+
+Returns the current game state of a game
+
+#### Request:
+
+**GET /get_game/{urlsafe_game_key}**
+
+#### Response: 
+
+The response is a Game Form representation of the game, as seen in *new_game* above. 
+
+## get_user_games
+---
+
+Returns all of a user's games. 
+
+#### Request:
+**GET /user/{urlsafe_user_key}**
+
+#### Reponse:
+
+The response contains a user object, and a list of Game Form representations of the user's games.
+
+```json
+{
+"user": {
+    "name": "john",
+    "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBFVzZXIYgICAgICAgAoM"
+    },
+"games": [
+    {
+    "board": "R QU P L  | E I B T  | U L Z A  | E S T I  | ",
+    "game_over": false,
+    "message": "Correct! 1 points for the word \"LISP\"",
+    "turns_remaining": "3",
+    "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBEdhbWUYgICAgICAoAgM",
+    "user1_is_next": false,
+    "user1_name": "john",
+    "user1_points": "1",
+    "user2_name": "sarah",
+    "user2_points": "0",
+    "words_found": "[\"LISP\"]"
+    }, 
+    {
+    "board": "...."
+    }
+]}
+```
+
+    
+## cancel_game
+---
+Allows a user to cancel a game in progress. The user who cancels a game forfeits, and the other user becomes the winner. 
+
+#### Request:
+
+**PUT /game/{urlsafe_game_key}/cancel**
+
+```json
+{
+    "user_name": "john"
+}
+```
+    
+#### Response: 
+
+The response is a Game Form representation of the cancelled game, including the message indicating that the other user is now the winner. 
+
+## get_user_rankings
+---
+Returns a list of users ranked by win_percentage, with ties broken by total wins.
+
+#### Request:
+**GET /user_rankings**
+
+####
+
+```json
+{
+ "users": [
+  {
+   "losses": "1",
+   "name": "beethoven",
+   "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBFVzZXIYgICAgICAwAgM",
+   "win_percentage": 0.9,
+   "wins": "9"
+  },
+  {
+   "losses": "3",
+   "name": "scooby doo",
+   "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBFVzZXIYgICAgICAgAkM",
+   "win_percentage": 0.7,
+   "wins": "7"
+  },
+  {
+   "losses": "5",
+   "name": "gerf",
+   "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBFVzZXIYgICAgICAgAoM",
+   "win_percentage": 0.5,
+   "wins": "5"
+  },
+  {
+   "losses": "8",
+   "name": "Claus",
+   "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBFVzZXIYgICAgICAgAsM",
+   "win_percentage": 0.2,
+   "wins": "2"
+  }
+ ]
+}
+```
  
-### Task 1: Explore the Architecture
-Get the skeleton 'Guess a Number' application up and running.
-Read through the code and documentation, and test the endpoints with API explorer.
-Make sure you understand how different entities are created, how they work together, and the overall flow of a game.
-Create a `User` or two and play a few games.
-Make sure to take a look at the admin Datastore viewer to check out the various entities.
-The datastore is typically at <a href="http://localhost:8000" target="_blank">http://localhost:8000</a>, but you may need to access it on another port.
+## get_game_history
+---
+Returns the history of moves for a game.
 
-### Task 2: Implement Your Own Game
-Come up with a new game to implement!
-This could be a more advanced guessing game such as Hangman, or a simple two player game like Tic-Tac-Toe.
-**Note:** Implementing a copy of Guess a Number will not be acceptable, we want you to be creative!
+#### Request:
+**GET games/{urlsafe_game_key}/history**
 
-Consider how the existing endpoints will work with the new game - you'll need to modify the models, forms, and resource containers, but the general structure should stay roughly the same so that Games can be created, moves played, and the game state updated and stored according to the rules.
+#### Response: 
 
-Here are some ideas to get you started:
 
-One-Player Games:
-- [Hangman](https://en.wikipedia.org/wiki/Hangman_(game))
-- [Solitaire](https://en.wikipedia.org/wiki/Klondike_(solitaire))
-- [Concentration](https://en.wikipedia.org/wiki/Concentration_(game))
+```json
+{
+ "game": {
+  "board": "R QU P L  | E I B T  | U L Z A  | E S T I  | ",
+  "game_over": false,
+  "message": "Here is the history of this game",
+  "turns_remaining": "1",
+  "urlsafe_key": "ag9kZXZ-Ym9nZ2xlLWdhbWVyEQsSBEdhbWUYgICAgICAoAgM",
+  "user1_is_next": false,
+  "user1_name": "john",
+  "user1_points": "1",
+  "user2_name": "sarah",
+  "user2_points": "0",
+  "words_found": "[\"BILE\"]"
+ },
+ "turns": [
+  "{\"user\": \"john\", \"message\": \"Sorry! The word \\\"COBBLE\\\" is not in the board.\"}",
+  "{\"user\": \"sarah\", \"message\": \"Sorry! \"ULZA\" is not in the english dictionary.\"}",
+  "{\"user\": \"john\", \"message\": \"Correct! 1 points for the word \\\"LISP\\\"\"}"
+ ]
+}
+```
 
-Two-Player Games:
-- [Tic-Tac-Toe](https://en.wikipedia.org/wiki/Tic-tac-toe)
-- [Battleship](https://en.wikipedia.org/wiki/Battleship_(game))
-- [Mancala](https://en.wikipedia.org/wiki/Mancala)
-- [Boggle](https://en.wikipedia.org/wiki/Boggle)
-- [War](https://en.wikipedia.org/wiki/War_(card_game))
-- [Yahtzee](https://en.wikipedia.org/wiki/Yahtzee) - This could be a one player game too
 
-Note for two-player games:
-These could be designed so that two players can play against each other, or they could be single player games played against an AI player of your design.
+## get_average_turns
+---
+Returns the cached average number of turns remaining across all games. 
 
-#### Score Keeping
-Define what a "score" for each game will be and keep this data in your database.
-For example in 'Guess a Number' the Score model stores the number of guesses taken before the number was found.
-Two player games do not need to implement this feature.
+#### Request:
+**GET /games/average_turns**
 
-You can record any other data that you think is interesting or relevant to your particular game.
-       
-### Task 3: Extend Your API
-A well engineered backend should be extensible.
-Let's test that theory and get additional practice working with the Datastore by implementing several new endpoints.
+#### Response: 
 
-You may need to customize them somewhat to fit the specifics of your game.
-
-Ensure that each new endpoint uses an appropriate HTTP Method.
-For example accesses to  data should be be performed with GET requests.
-
-Finally, these endpoints should be documented in your README just like the ones for Guess a Number.
-
- - **get_user_games**
-    - This returns all of a User's active games. <todo what if the player prevented concurrent games? Maybe this should be a list of all games (active or not) that the user is related to>
-    - You may want to modify the `User` and `Game` models to simplify this type
-    of query. **Hint:** it might make sense for each game to be a `descendant` 
-    of a `User`.
-    
- - **cancel_game**
-    - This endpoint allows users to cancel a game in progress.
-    You could implement this by deleting the Game model itself, or add a Boolean field such as 'cancelled' to the model.     Ensure that Users are not permitted to remove *completed* games.
-    
- - **get_high_scores**
-    - Remember how you defined a score in Task 2?
-    Now we will use that to generate a list of high scores in descending order, a leader-board!
-    - Accept an optional parameter `number_of_results` that limits the number of results returned.
-    - Note: If you choose to implement a 2-player game this endpoint is not required.
-    
- - **get_user_rankings**
-    - Come up with a method for ranking the performance of each player.
-      For "Guess a Number" this could be by winning percentage with ties broken by the average number of guesses.
-    - Create an endpoint that returns this player ranking. The results should include each Player's name and the 'performance' indicator (eg. win/loss ratio).
- 
- - **get_game_history**
-    - Your API Users may want to be able to see a 'history' of moves for each game.
-    - For example, Chess uses a format called <a href="https://en.wikipedia.org/wiki/Portable_Game_Notation" target="_blank">PGN</a>) which allows any game to be replayed and watched move by move.
-    - Add the capability for a Game's history to be presented in a similar way. For example: If a User made played 'Guess a Number' with the moves:
-    (5, 8, 7), and received messages such as: ('Too low!', 'Too high!',
-    'You win!'), an endpoint exposing the game_history might produce something like:
-    [('Guess': 5, result: 'Too low'), ('Guess': 8, result: 'Too high'),
-    ('Guess': 7, result: 'Win. Game over')].
-    - Adding this functionality will require some additional properties in the 'Game' model along with a Form, and endpoint to present the data to the User.
-
-### Task 4: Improve Notifications
-In the skeleton Guess a Number project, a cron job and associated handler have been created (see cron.yaml and main.py).
-This sends an hourly reminder email to every User with an email address to try out 'Guess a Number'.
-This is probably annoying the users.
-
-Modify the SendReminderEmail handler so that this reminder email is only sent to users that have incomplete games (or some other logic that makes sense to you).
-Make sure to update the message to reflect this.
-
-**Optional Improvements:**
-- If you're feeling  ambitious you can implement more sophisticated notifications.
-For example: "If the User has not made a move in an active game for more than 12 hours, send a reminder email that includes the current game state." 
-- If you created a two-player game, you can implement a turn notification system!
-When one user makes a move, add a task to the task queue to notify the User's opponent that it's their turn.
-You can use the `SendReminderEmail` handler in main.py as a template.
-Remember that you will need to pass parameters to identify the Game and User that should receive the reminder.
-Don't forget to update `app.yaml` with the new Handler listing.
-Finally, consult Google App Engine documentation for <a href="https://cloud.google.com/appengine/docs/python/taskqueue/overview-push" target="_blank">Using Push Queues in Python</a>.
-
-#### Task 5: README and API Documentation
-Be sure to document your game. Your README file should include:
-
-1. Instructions for playing the game
-2. Detailed descriptions of each endpoint
-
-Remember, you are documenting an API that another programmer may want to use as the basis for a web or mobile app.
-An api user should *not* need to read the source code to understand how to use it.
-You may follow the format of 'Guess a Number' for your README.
-
-### Reflect on Your Design
-Document your design decisions by answering the following questions:
-   
-- What additional properties did you add to your models and why?
-- What were some of the trade-offs or struggles you faced when implementing the new game logic?
-
-These answers should be in a file Design.txt.
-Your responses can be in paragraph form or bulleted lists.
-This document should be around 500 words long.
+```json
+{
+ "message": "The average moves remaining is 2.25"
+}
+```

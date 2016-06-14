@@ -1,24 +1,34 @@
 # -*- coding: utf-8 -*-`
-"""api.py - Create and configure the Game API exposing the resources.
-This can also contain game logic. For more complex games it would be wise to
-move game logic to another file. Ideally the API will be simple, concerned
-primarily with communication to/from the API's users."""
+"""api.py - This file creates and configure the Boggle API and exposes the
+resources.
+"""
 
 
-import logging
 import json
 import sys
-import endpoints
 import xml.etree.ElementTree as ET
-from boggle import word_points
-from protorpc import remote, messages
-from google.appengine.api import memcache
-from google.appengine.api import taskqueue
-from google.appengine.api import urlfetch
+
+import endpoints
+from google.appengine.api import (
+    memcache,
+    taskqueue,
+    urlfetch
+)
 from google.appengine.ext import ndb
-from models import User, Game
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm
-from models import UserPerformanceForms, UserGameForms, GameHistoryForm
+from protorpc import remote, messages
+
+from boggle import word_points
+from models import (
+    User,
+    Game,
+    StringMessage,
+    NewGameForm,
+    GameForm,
+    MakeMoveForm,
+    UserPerformanceForms,
+    UserGameForms,
+    GameHistoryForm
+)
 from utils import get_by_urlsafe
 
 #  ## --- Resource Container Configuration --- ###  #
@@ -41,17 +51,16 @@ CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 
-#  ## --- Endpoints  --- ##  #
 @endpoints.api(name='boggle', version='v1')
 class BoggleApi(remote.Service):
-    """Game API"""
+    """A REST API for 2 player Boggle"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
                       path='user',
                       name='create_user',
                       http_method='POST')
     def create_user(self, request):
-        """Create a User. Requires a unique username"""
+        """Create a User. Requires a unique username."""
         if User.query(User.name == request.user_name).get():
             raise endpoints.ConflictException(
                     'A User with that name already exists!')
@@ -66,7 +75,11 @@ class BoggleApi(remote.Service):
                       name='new_game',
                       http_method='POST')
     def new_game(self, request):
-        """Creates new game"""
+        """Creates and responds with a new game.
+        Each game has a randomly generated board, two players, and
+        a customizable number of turns allowed. The Game model also contains
+        a number of variables for tracking the game state.
+        """
         user1_name = request.user1_name
         user1 = User.query(User.name == request.user1_name).get()
         if not user1:
@@ -77,9 +90,12 @@ class BoggleApi(remote.Service):
         if not user2:
             raise endpoints.NotFoundException(
                     'A User named %s does not exist!' % user2_name)
+        if user1.name == user2.name:
+            raise endpoints.NotFoundException(
+                'Sorry, you can\'t play against yourself'
+            )
         try:
             game = Game.new_game(user1.key, user2.key, request.turns)
-            # print user1.key, user2.key
             user1.games.append(game.key)
             user2.games.append(game.key)
         except:
@@ -91,8 +107,10 @@ class BoggleApi(remote.Service):
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_turns')
-
-        return game.to_form('Good luck playing biggle!')
+        msg = 'Good luck playing boggle {} and {}.'.format(
+                user1.name, user2.name
+        )
+        return game.to_form('Good luck playing Boggle!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -100,7 +118,7 @@ class BoggleApi(remote.Service):
                       name='get_game',
                       http_method='GET')
     def get_game(self, request):
-        """Return the current game state."""
+        """Get the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game is not None:
             return game.to_form('Time to make a move!')
@@ -113,11 +131,15 @@ class BoggleApi(remote.Service):
                       name='make_move',
                       http_method='PUT')
     def make_move(self, request):
-        """Makes a move. Returns a game state with message"""
+        """A player submits a "guess" for a word found on the board.
+        The guess is checked for validity, and the game state updated
+        accordingly.
+        Returns a game state with message.
+        """
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
-        user_name = request.user_name        
+        user_name = request.user_name
         user = User.query(User.name == request.user_name).get()
         if user is None:
             return game.to_form('Player not found.')
@@ -130,31 +152,33 @@ class BoggleApi(remote.Service):
             whose_turn = game.user1
         if user.key != whose_turn:
             return game.to_form('It\'s not your turn')
-        # All these checks have passed, so the turn can proceed, and the game 
+        # All these checks have passed, so the turn can proceed, and the game
         # will be updated:
         game.user1_is_next = not game.user1_is_next
         game.turns_remaining -= 1
         msg = ""
         # make the submitted word all caps for checking.
         guess = request.guess.upper()
-        # Check that the word is in the dictionary:
+        # Use the Merriam-Webster API to check that the word is in the
+        # English dictionary:
         dictionary_url = "http://www.dictionaryapi.com"\
                          "/api/v1/references/collegiate/xml/{word}?key={key}"
         dict_lookup = urlfetch.Fetch(
+            # I realize that publishing API keys on GitHub is bad practice,
+            # but for the purposes of this project, the risks are minimal.
             dictionary_url.format(word=guess,
                                   key='a910e27f-cb8e-4d10-9a2d-b8bf3530c02d')
         )
         # The Merriam-Webster API returns an XML string. If the word is found
         # the XML will contain an <entry> tag.
-        # This makes us of the ElementTree XML API module
-        # https://docs.python.org/2.7/library/xml.etree.elementtree.html
+        # Use the ElementTree XML API module to look for the <entry> tag
         parsed_xml = ET.fromstring(dict_lookup.content)
         entry = parsed_xml.find('entry')
         if entry is None:
             msg += 'Sorry! "{}" is not in the english dictionary'.format(guess)
         # Check that this word hasn't already been found
         elif guess in game.words_found:
-            msg +='Sorry! "{}" that word has already been found'.format(guess)
+            msg += 'Sorry! "{}" that word has already been found'.format(guess)
         # Check that the word can be found on the board
         elif not game.check_word(guess):
             msg += 'Sorry! The word "{}" is not in the board.'.format(guess)
@@ -191,11 +215,11 @@ class BoggleApi(remote.Service):
 
     @endpoints.method(request_message=CANCEL_GAME_REQUEST,
                       response_message=GameForm,
-                      path='games/{urlsafe_game_key}/cancel',
+                      path='game/{urlsafe_game_key}/cancel',
                       name='cancel_game',
                       http_method='PUT')
     def cancel_game(self, request):
-        """Allow a user to forfeit by cancelling a game"""        
+        """Allow a user to forfeit by cancelling a game."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
@@ -215,7 +239,7 @@ class BoggleApi(remote.Service):
                       name='get_user_games',
                       http_method='GET')
     def get_user_games(self, request):
-        """Return the a list of game states for a user ."""
+        """Return the a list of game states for a user."""
         user = get_by_urlsafe(request.urlsafe_user_key, User)
         if user is not None:
             print user.games
@@ -233,9 +257,9 @@ class BoggleApi(remote.Service):
             return UserGameForms(
                 user=user.to_form(),
                 games=[game.to_form(
-                        '{name} is a player in this game'.
-                        format(name=user.name)) for game in games_list
-                       ])
+                    '{name} is a player in this game'.
+                    format(name=user.name)) for game in games_list]
+            )
         else:
             raise endpoints.NotFoundException('User not found!')
 
@@ -243,18 +267,16 @@ class BoggleApi(remote.Service):
                       path='user_rankings',
                       name='get_user_rankings',
                       http_method='GET')
-    def get_user_rankings(self,request):
-        """Returns a list of users ranked by win_percentage and then 
+    def get_user_rankings(self, request):
+        """Returns a list of users ranked by win_percentage and then
         by totals wins."""
         users = User.query()
         users = users.order(-User.wins)
-        # win_percentage is derived from an entity method, so we can't us
+        # win_percentage is derived from an entity method, so we can't use
         # the query.order method. We'll use a list sort instead.
         users_list = [u.to_performance_form() for u in users]
-        users_list.sort(key = lambda user: -user.win_percentage)
-        response = UserPerformanceForms(
-            users= users_list
-            )
+        users_list.sort(key=lambda user: -user.win_percentage)
+        response = UserPerformanceForms(users=users_list)
         return response
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -262,13 +284,13 @@ class BoggleApi(remote.Service):
                       path='games/{urlsafe_game_key}/history',
                       name='get_game_history',
                       http_method='GET')
-    def get_game_history(self,request):
+    def get_game_history(self, request):
         """Returns the history of moves for a game."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game is not None:
             response = GameHistoryForm(
-                game = game.to_form('Here is the history of this game'),
-                turns = [json.dumps(turn) for turn in game.history]
+                game=game.to_form('Here is the history of this game'),
+                turns=[json.dumps(turn) for turn in game.history]
             )
             return response
         else:
@@ -283,8 +305,9 @@ class BoggleApi(remote.Service):
             total_turns_remaining = sum([game.turns_remaining
                                         for game in games])
             average = float(total_turns_remaining)/count
-            memcache.set(MEMCACHE_MOVES_REMAINING,
-                         'The average moves remaining is {:.2f}'.format(average))
-
+            memcache.set(
+                MEMCACHE_MOVES_REMAINING,
+                'The average moves remaining is {:.2f}'.format(average)
+            )
 
 api = endpoints.api_server([BoggleApi])

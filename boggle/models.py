@@ -2,14 +2,13 @@
 entities used by the Game. Because these classes are also regular Python
 classes they can include methods (such as 'to_form' and 'new_game')."""
 
-import random
-import json
-import boggle
-import generate_board
 from decimal import Decimal
-from datetime import date
-from protorpc import messages
+import json
+
 from google.appengine.ext import ndb
+from protorpc import messages
+
+import boggle
 
 
 class User(ndb.Model):
@@ -28,6 +27,7 @@ class User(ndb.Model):
         return form
 
     def win_percentage(self):
+        """Calculates the percentage of games won out of games played"""
         if self.wins + self.losses < 1:
             return float(0)
         else:
@@ -64,9 +64,7 @@ class Game(ndb.Model):
     @classmethod
     def new_game(cls, user1, user2, turns):
         """Creates and returns a new game"""
-        # generate a 4x4 board
-        board = generate_board.board()
-
+        board = boggle.board()
         game = Game(board=board,
                     user1=user1,
                     user2=user2,
@@ -78,11 +76,20 @@ class Game(ndb.Model):
         game.put()
         return game
 
+    def pretty_board(self):
+        """returns a more readable board"""
+        output = ""
+        for row in self.board:
+            for char in row:
+                output += char + " "
+            output += " | "
+        return output
+
     def check_word(self, word):
         """Returns a boolean value indicating whether the word
         can actually be constructed from the board.
         """
-        # use the boggle.find_letters() method to get a list of the coords
+        # use the boggle.find_letters() function to get a list of the coords
         # of the words
         word_coords = boggle.find_letters(word, self.board)
         # check for a continuous path among thos coordinates
@@ -98,7 +105,7 @@ class Game(ndb.Model):
         form.user2_points = self.user2_points
         form.user1_is_next = self.user1_is_next
         form.turns_remaining = self.turns_remaining
-        form.board = json.dumps(self.board)
+        form.board = self.pretty_board()
         form.words_found = json.dumps(self.words_found)
         form.game_over = self.game_over
         form.message = message
@@ -144,11 +151,13 @@ class Game(ndb.Model):
 
 
 class UserForm(messages.Message):
+    """Simple form with basic user information"""
     urlsafe_key = messages.StringField(1, required=True)
     name = messages.StringField(2, required=True)
 
 
 class UserPerformanceForm(messages.Message):
+    """Form containing data about a user's win/loss history"""
     name = messages.StringField(1, required=True)
     win_percentage = messages.FloatField(2, required=True)
     wins = messages.IntegerField(3, required=True)
@@ -177,7 +186,7 @@ class GameForm(messages.Message):
 
 
 class UserGameForms(messages.Message):
-    """Return multiple GameForms for a User"""
+    """Multiple GameForms for a User"""
     user = messages.MessageField(UserForm, 1)
     games = messages.MessageField(GameForm, 2, repeated=True)
 
@@ -196,6 +205,9 @@ class MakeMoveForm(messages.Message):
 
 
 class GameHistoryForm(messages.Message):
+    """Contains a GameForm, and the game's history in the form of informative
+    messages for each turn.
+    """
     game = messages.MessageField(GameForm, 1, required=True)
     turns = messages.StringField(2, repeated=True)
 
