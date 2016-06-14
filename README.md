@@ -18,10 +18,15 @@ To run it locally:
 
 Refer to the rules and endpoints documentation below for further instructions.
 
-
 ## Rules: 
 
+These are general rules explaining game play for this version of Boggle. 
 
+- Games are limited to two players/users.
+- Each game has a randomly generated Board of 16 letters arranged in a 4x4 grid.
+- Players take turns submitting a word they have found on the board.
+- Longer words are worth more points.
+- Refer to the "make_move" endpoint below for criteria for a valid word, and how points are awarded for a word.
 
 ## Endpoints: 
 
