@@ -20,7 +20,7 @@ def board():
         ["I", "O", "T", "M", "U", "C"],  ["E", "R", "T", "T", "Y", "L"],
         ["R", "Y", "V", "D", "E", "L"],  ["T", "O", "E", "S", "S", "I"],
         ["L", "R", "E", "I", "X", "D"],  ["T", "E", "R", "W", "H", "V"],
-        ["E", "I", "U", "N", "E", "S"],  ["N", "U", "I", "H", "M", "QU"]
+        ["E", "I", "U", "N", "E", "S"],  ["N", "U", "I", "H", "M", "S"]
     ]
 
     # first we will build a list in which each element is one face of the die

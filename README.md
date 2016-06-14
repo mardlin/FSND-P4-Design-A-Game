@@ -1,7 +1,7 @@
 # Boggle API
 
 The Boggle API provides a basic framework for a two player Boggle game, and ranking the performance of multiple players across multiple games. 
-
+ 
 ### Setup:
 
 The Boggle API runs on Google App Engine. 
