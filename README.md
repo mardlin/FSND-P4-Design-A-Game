@@ -2,11 +2,16 @@
 
 The Boggle API provides a basic framework for a two player Boggle game, and ranking the performance of multiple players across multiple games. 
  
-### Setup:
+### Get started:
 
-The Boggle API runs on Google App Engine. 
+The Boggle API runs on Google App Engine. App Engine's API Explorer interface, allows you to [play the game](https://apis-explorer.appspot.com/apis-explorer/?base=https://boggle-game.appspot.com/_ah/api#p/boggle/v1/) right away:
 
-To run it locally:
+1. Create two users [here](https://apis-explorer.appspot.com/apis-explorer/?base=https://boggle-game.appspot.com/_ah/api#p/boggle/v1/boggle.create_user) 
+2. Create a [new game](https://apis-explorer.appspot.com/apis-explorer/?base=https://boggle-game.appspot.com/_ah/api#p/boggle/v1/boggle.create_user) with those user names.
+
+(Refer to the endpoints documentation below for request and response formats)
+
+### Local setup:
 
 1. Install the [Google App Engine SDK for Python](https://cloud.google.com/appengine/downloads#Google_App_Engine_SDK_for_Python)
 2. Run the GoogleAppEngineLauncher. 
