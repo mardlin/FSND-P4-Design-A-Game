@@ -78,7 +78,7 @@ def find_letter(letter, board):
 
 
 def find_letters(word, board):
-    """This function is used models.Game.check_word(), as an input for
+    """This function is used by models.Game.check_word(), as an input for
     the all_paths() function defined below.
 
     Returns a dict, with coordinates of each letter in the word.
