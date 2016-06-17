@@ -253,11 +253,12 @@ class BoggleApi(remote.Service):
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     print exc_type, exc_obj
                 else:
-                    games_list.append(game)
+                    if not game.game_over:
+                        games_list.append(game)
             return UserGameForms(
                 user=user.to_form(),
                 games=[game.to_form(
-                    '{name} is a player in this game'.
+                    '{name} is a player in this active game'.
                     format(name=user.name)) for game in games_list]
             )
         else:
