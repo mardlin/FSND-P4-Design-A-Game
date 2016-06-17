@@ -141,7 +141,6 @@ def all_paths(word, word_coords):
         word_coords: the dict of letters and their coordinates.
     """
     options = []
-    path_list = []  # We'll build this into a list of lists of tuples
     # Use the word to traverse the dict
     for letter in word:
         # Using the code in list_games.py, create a new function to

@@ -14,7 +14,6 @@ from google.appengine.api import (
     taskqueue,
     urlfetch
 )
-from google.appengine.ext import ndb
 from protorpc import remote, messages
 
 from boggle import word_points
