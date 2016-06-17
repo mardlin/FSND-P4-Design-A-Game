@@ -109,15 +109,47 @@ Using this endpoint, a user submits a "guess" for a word found on the board. The
 
 If the requirements are not met, the response will contain an error message, and the game state will not be modified. 
 
-#### The following are required in order to successfuly find a word endpoint:
+#### Requirements for a valid word
 
-- The word is english
+1. The word is english
     - The [Merriam-Webster Dictionary API](http://www.dictionaryapi.com) is used for reference
-- The word can be found on the board, ie:
-    + Each of the letters in the word is present on the board, and the word can be spelled by moving in a **path** from one letter to the next in order. 
+
+2. The word can be "found" on the board. 
+  - Each of the letters in the word is present on the board, and the word can be spelled by moving in a **path** from one letter to the next in order.
     + A path is valid if each letter is adjacent to the previous, either above/below, to the side, or diagonally 
-    + No letter on the board can be used twice
+    + No letter in a _given position_ can appear twice in a _single word_. 
+      * If the letter "R" appears only once, the word "RARE" would *not* be valid. 
+      * If the letter "R" appears twice, the word "RARE" could be valid.
+    + Letters can be reused in subsequents words
+      * If the letter "L" appears only once, the words "TALE" and "LATE" could both be valid.
+    + The word has not yet been found
+      * This applies even if the word appears twice
 - The guess is not case-sensitive, ie. "WORD", "word", and "wORd" will all be treated equally.
+
+#### Examples:
+
+Here's an example board, let's look at some of the words that can and can not be found:
+```
+  F X I E
+  A M L O
+  E W B X
+  W O T U
+```
+
+*Valid words:* 
+- BOX 
+- MILE
+- LIME (MILE and LIME containe the same letters, but that's OK) 
+- WOW (The W appears twice) 
+- BOW (this could only be found once, even though it can be spelled with either W)
+
+*Invalid words:*
+
+- FAMILY (There's no Y on the board)
+- BLOB (The same B is used twice)
+- IXAWBUTO (Not an english word)
+
+
 
 ##### Points are awarded for a valid word based on the following scheme: 
 
